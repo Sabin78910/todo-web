@@ -34,3 +34,6 @@ export function save(list: Todo[]): void {
     /* storage unavailable (private mode) — ignore */
   }
 }
+
+export const editTodo = (list: Todo[], id: string, text: string): Todo[] =>
+  text.trim() ? list.map((t) => (t.id === id ? { ...t, text: text.trim() } : t)) : list;

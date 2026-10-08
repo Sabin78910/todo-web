@@ -30,3 +30,24 @@ test("shows 'Nothing here' when todos exist but none match the filter", async ()
   expect(screen.queryByText("Nothing here")).not.toBeInTheDocument();
   expect(screen.getByText("Write tests")).toBeInTheDocument();
 });
+
+test("double-click edits a todo; Enter saves", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "Write tests{enter}");
+  await userEvent.dblClick(screen.getByText("Write tests"));
+  const input = screen.getByLabelText("Edit todo");
+  await userEvent.clear(input);
+  await userEvent.type(input, "Ship it{enter}");
+  expect(screen.getByText("Ship it")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Edit todo")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].text).toBe("Ship it");
+});
+
+test("Escape cancels editing", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "Write tests{enter}");
+  await userEvent.dblClick(screen.getByText("Write tests"));
+  await userEvent.type(screen.getByLabelText("Edit todo"), "xyz{escape}");
+  expect(screen.getByText("Write tests")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Edit todo")).not.toBeInTheDocument();
+});
