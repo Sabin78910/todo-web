@@ -8,6 +8,7 @@ export default function App() {
 
   useEffect(() => save(todos), [todos]);
 
+  const shown = visible(todos, filter);
   const left = todos.filter((t) => !t.done).length;
 
   return (
@@ -33,8 +34,9 @@ export default function App() {
         <button className="link" onClick={() => setTodos(clearDone)}>Clear done</button>
       </div>
 
+      {shown.length === 0 && <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>}
       <ul className="list card">
-        {visible(todos, filter).map((t) => (
+        {shown.map((t) => (
           <li key={t.id}>
             <label className="row" style={{ margin: 0, color: "inherit" }}>
               <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
