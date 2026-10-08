@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { addTodo, clearDone, type Filter, load, removeTodo, save, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, load, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
   const [todos, setTodos] = useState(load);
   const [text, setText] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+
+  const finishEdit = (commit: boolean) => {
+    if (commit && editing) setTodos((l) => editTodo(l, editing.id, editing.text));
+    setEditing(null);
+  };
 
   useEffect(() => save(todos), [todos]);
 
@@ -38,10 +44,24 @@ export default function App() {
       <ul className="list card">
         {shown.map((t) => (
           <li key={t.id}>
-            <label className="row" style={{ margin: 0, color: "inherit" }}>
-              <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
-              <span style={{ textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-            </label>
+            {editing?.id === t.id ? (
+              <input
+                aria-label="Edit todo"
+                autoFocus
+                value={editing.text}
+                onChange={(e) => setEditing({ id: t.id, text: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") finishEdit(true);
+                  else if (e.key === "Escape") finishEdit(false);
+                }}
+                onBlur={() => finishEdit(false)}
+              />
+            ) : (
+              <label className="row" style={{ margin: 0, color: "inherit" }}>
+                <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
+                <span style={{ textDecoration: t.done ? "line-through" : "none" }} onDoubleClick={() => setEditing({ id: t.id, text: t.text })}>{t.text}</span>
+              </label>
+            )}
             <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
           </li>
         ))}
