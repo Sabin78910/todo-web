@@ -109,3 +109,41 @@ test("header shows the streak and best streak", async () => {
   await userEvent.click(screen.getByRole("checkbox"));
   expect(screen.getByText("🔥 1-day streak · best 1")).toBeInTheDocument();
 });
+
+async function reachGoalOfOne() {
+  render(<App />);
+  const input = screen.getByLabelText("Daily goal");
+  await userEvent.clear(input);
+  await userEvent.type(input, "1");
+  await userEvent.type(screen.getByLabelText("New todo"), "a{enter}");
+  await userEvent.type(screen.getByLabelText("New todo"), "b{enter}");
+}
+
+test("confetti bursts once per day when the goal is reached", async () => {
+  await reachGoalOfOne();
+  expect(screen.queryByTestId("confetti")).not.toBeInTheDocument();
+  const [a, b] = screen.getAllByRole("checkbox");
+  await userEvent.click(a);
+  expect(screen.getByTestId("confetti")).toBeInTheDocument();
+  expect(localStorage.getItem("celebrated")).toBe(new Date().toLocaleDateString("en-CA"));
+  await userEvent.click(a); // uncheck
+  await userEvent.click(b);
+  await userEvent.click(a);
+  expect(screen.getByTestId("confetti")).toBeInTheDocument(); // still the first burst, not a new one
+});
+
+test("no confetti again on the same day after it has played", async () => {
+  localStorage.setItem("celebrated", new Date().toLocaleDateString("en-CA"));
+  await reachGoalOfOne();
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
+  expect(screen.queryByTestId("confetti")).not.toBeInTheDocument();
+});
+
+test("no confetti with prefers-reduced-motion", async () => {
+  window.matchMedia = ((q: string) => ({ matches: q.includes("reduce") })) as unknown as typeof window.matchMedia;
+  await reachGoalOfOne();
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
+  expect(screen.queryByTestId("confetti")).not.toBeInTheDocument();
+  // @ts-expect-error cleanup
+  delete window.matchMedia;
+});
