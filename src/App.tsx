@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
-import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
@@ -23,6 +23,7 @@ export default function App() {
     localStorage.setItem("theme", next);
     setTheme(next);
   };
+  const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [todos, setTodos] = useState(load);
   const [text, setText] = useState("");
@@ -122,7 +123,7 @@ export default function App() {
         }}
       >
         <div className="row add-main">
-          <input aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
+          <input ref={inputRef} aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
           <button type="button" className="secondary" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>Details</button>
           <button type="submit">Add</button>
         </div>
@@ -155,10 +156,23 @@ export default function App() {
         <button className="link" onClick={() => setTodos(clearDone)}>Clear done</button>
       </div>
 
-      {shown.length === 0 && <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>}
+      {shown.length === 0 && (
+        <div className="empty">
+          {todos.length === 0 && (
+            <svg data-testid="empty-illustration" width="120" height="96" viewBox="0 0 120 96" aria-hidden="true">
+              <rect x="22" y="10" width="76" height="76" rx="14" fill="none" stroke="var(--accent)" strokeWidth="4" />
+              <path d="M42 48l14 14 24-28" fill="none" stroke="var(--success)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="104" cy="16" r="5" fill="var(--accent-2)" />
+              <circle cx="14" cy="76" r="4" fill="var(--streak)" />
+            </svg>
+          )}
+          <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>
+          {todos.length === 0 && <button type="button" onClick={() => inputRef.current?.focus()}>Add your first task</button>}
+        </div>
+      )}
       <ul className="list card">
         {shown.map((t, i) => (
-          <li key={t.id}>
+          <li key={t.id} className={t.done ? "task done" : "task"}>
             {editing?.id === t.id ? (
               <input
                 aria-label="Edit todo"
@@ -173,11 +187,11 @@ export default function App() {
               />
             ) : (
               <label className="row" style={{ margin: 0, color: "inherit" }}>
-                <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => toggle(t.id)} />
+                <input type="checkbox" className="check" checked={t.done} onChange={() => toggle(t.id)} />
+                {t.priority && <i className={`prio-dot prio-${t.priority}`} data-testid="prio-dot" aria-hidden="true" />}
                 <span
                   className={[isOverdue(t, today) ? "error" : "", t.done ? "checked" : ""].join(" ").trim() || undefined}
-                  style={{ textDecoration: t.done ? "line-through" : "none" }}
-                  onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
+                                  onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
                 >{t.text}</span>
                 {t.priority && (
                   <span className={`prio prio-${t.priority}`} data-priority={t.priority} title={PRIORITY_LABEL[t.priority]}>
@@ -185,7 +199,7 @@ export default function App() {
                   </span>
                 )}
                 {t.repeat && <span className="muted" aria-label={`Repeats ${t.repeat}`}>🔁</span>}
-                {t.due && <span className={isOverdue(t, today) ? "error" : "muted"}>due {t.due}</span>}
+                {t.due && <span className={`due-chip due-${dueStatus(t, today)}`}>due {t.due}</span>}
               </label>
             )}
             <select aria-label={`Priority for ${t.text}`} value={t.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, t.id, parsePriority(e.target.value)))}>

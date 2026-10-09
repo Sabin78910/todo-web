@@ -71,3 +71,6 @@ export const setPriority = (list: Todo[], id: string, priority?: Priority): Todo
 const rank = (p?: Priority) => p ?? 4;
 export const sortByPriority = (list: Todo[]): Todo[] =>
   [...list].sort((a, b) => rank(a.priority) - rank(b.priority) || (a.due ?? "9999").localeCompare(b.due ?? "9999"));
+
+export const dueStatus = (t: Todo, today: string): "overdue" | "today" | "later" | undefined =>
+  !t.due ? undefined : isOverdue(t, today) ? "overdue" : !t.done && t.due === today ? "today" : "later";

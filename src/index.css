@@ -85,3 +85,28 @@ th:first-child, td:first-child { text-align: left; }
 .chip { align-self: flex-start; padding: 4px 12px; border-radius: var(--pill); background: rgba(0, 0, 0, 0.28); font-size: var(--fs-sm); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .ring-fg, .bar i { transition: none; } }
 @media (max-width: 600px) { .hero { flex-direction: column; text-align: center; } .hero-body { align-items: center; } .chip { align-self: center; } }
+
+/* Task cards */
+ul.list.card { background: transparent; border: 0; box-shadow: none; padding: 0; }
+ul.list li.task { gap: 8px; padding: 12px 14px; margin-bottom: 8px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; animation: task-in 0.25s ease-out; }
+ul.list li.task:hover { transform: translateY(-1px); border-color: var(--accent); }
+ul.list li.task:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-2); }
+input.check { appearance: none; width: 24px; height: 24px; padding: 0; margin: 0; flex: none; border-radius: 50%; border: 2px solid var(--muted); background: transparent; cursor: pointer; position: relative; transition: background 0.2s ease, border-color 0.2s ease; }
+input.check::after { content: ""; position: absolute; left: 7px; top: 3px; width: 6px; height: 12px; border: solid #fff; border-width: 0 3px 3px 0; transform: rotate(45deg) scale(0); transition: transform 0.2s ease; }
+input.check:checked { background: var(--success); border-color: var(--success); animation: check-bounce 0.35s ease-out; }
+input.check:checked::after { transform: rotate(45deg) scale(1); }
+li.task.done .task-text, li.task.done span.checked { opacity: 0.6; text-decoration: line-through; }
+.task span { transition: opacity 0.3s ease; }
+.prio-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.due-chip { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--pill); background: var(--input-bg); color: var(--muted); border: 1px solid var(--border); }
+.due-chip.due-overdue { background: #fde8e8; color: #9b1c1c; border-color: #f5b5b5; }
+.due-chip.due-today { background: #fdf0d0; color: #7a4a00; border-color: #f0cf86; }
+:root[data-theme="dark"] .due-chip.due-overdue { background: #4a1d1d; color: #ffb4b4; border-color: #7a2d2d; }
+:root[data-theme="dark"] .due-chip.due-today { background: #4a3510; color: #ffd98a; border-color: #7a5a1d; }
+.empty { text-align: center; padding: 24px 0; }
+@keyframes task-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes check-bounce { 0% { transform: scale(1); } 50% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  ul.list li.task, input.check, input.check::after, .task span { animation: none !important; transition: none !important; }
+  ul.list li.task:hover { transform: none; }
+}
