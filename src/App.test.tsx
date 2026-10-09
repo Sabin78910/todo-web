@@ -99,3 +99,13 @@ test("daily goal is editable", async () => {
   await userEvent.type(input, "3");
   expect(screen.getByText("0/3 today")).toBeInTheDocument();
 });
+
+test("header shows the streak and best streak", async () => {
+  render(<App />);
+  expect(screen.getByText("🔥 0-day streak · best 0")).toBeInTheDocument();
+  await userEvent.clear(screen.getByLabelText("Daily goal"));
+  await userEvent.type(screen.getByLabelText("Daily goal"), "1");
+  await userEvent.type(screen.getByLabelText("New todo"), "One{enter}");
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByText("🔥 1-day streak · best 1")).toBeInTheDocument();
+});
