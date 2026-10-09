@@ -33,6 +33,13 @@ export function levelFor(points: number): { name: string; next: number | null } 
   return { name: LEVELS[i].name, next: LEVELS[i + 1]?.min ?? null };
 }
 
+export function levelProgress(points: number): { name: string; next: number | null; ratio: number } {
+  const { name, next } = levelFor(points);
+  if (next === null) return { name, next, ratio: 1 };
+  const min = LEVELS.find((l) => l.name === name)!.min;
+  return { name, next, ratio: (points - min) / (next - min) };
+}
+
 export function award(r: Rewards, t: Todo, today: string): Rewards {
   if (r.awarded.includes(t.id)) return r;
   const doneToday = (r.day === today ? r.doneToday : 0) + 1;
