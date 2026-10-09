@@ -1,4 +1,4 @@
-import { addDays, award, streakInfo, DEFAULT_GOAL, goalProgress, levelFor, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
+import { addDays, award, streakInfo, DEFAULT_GOAL, goalProgress, levelFor, levelProgress, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
 
 const todo = { id: "1", text: "a", done: true };
 const fresh: Rewards = { points: 0, goal: DEFAULT_GOAL, day: "2026-01-02", doneToday: 0, awarded: [], metDays: [], best: 0 };
@@ -88,4 +88,10 @@ test("award records the day when the goal is met and updates best", () => {
   r = award(r, { ...todo, id: "2" }, "2026-01-02");
   expect(r.metDays).toEqual(["2026-01-01", "2026-01-02"]);
   expect(r.best).toBe(2);
+});
+
+test("levelProgress gives position within the current level", () => {
+  expect(levelProgress(0)).toMatchObject({ name: "Beginner", next: 100, ratio: 0 });
+  expect(levelProgress(250)).toMatchObject({ name: "Apprentice", next: 300, ratio: 0.75 });
+  expect(levelProgress(2500)).toMatchObject({ name: "Grand Master", next: null, ratio: 1 });
 });

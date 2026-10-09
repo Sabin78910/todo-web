@@ -72,3 +72,16 @@ th:first-child, td:first-child { text-align: left; }
 .prio-2 { background: #b45f06; }
 .prio-3 { background: #2e6da4; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.hero { display: flex; gap: 20px; align-items: center; padding: 20px; margin-bottom: 16px; border-radius: var(--radius); color: #fff; background: linear-gradient(135deg, #4a3bd0, #6a4bdc); box-shadow: var(--shadow); }
+.hero .ring { flex: none; }
+.ring-fg { transition: stroke-dashoffset 0.8s ease; }
+.hero-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.hero-title { font-size: var(--fs-lg); font-weight: 800; }
+.hero-level { font-weight: 700; }
+.hero-pts { font-size: var(--fs-sm); }
+.bar { height: 8px; border-radius: var(--pill); background: rgba(255, 255, 255, 0.28); overflow: hidden; }
+.bar i { display: block; height: 100%; background: #fff; border-radius: var(--pill); transition: width 0.8s ease; }
+.chip { align-self: flex-start; padding: 4px 12px; border-radius: var(--pill); background: rgba(0, 0, 0, 0.28); font-size: var(--fs-sm); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .ring-fg, .bar i { transition: none; } }
+@media (max-width: 600px) { .hero { flex-direction: column; text-align: center; } .hero-body { align-items: center; } .chip { align-self: center; } }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
-import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
+import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
@@ -66,7 +66,8 @@ export default function App() {
   const shown = visible(todos, filter);
   const progress = goalProgress(rewards, today);
   const streak = streakInfo(rewards, today);
-  const level = levelFor(rewards.points);
+  const level = levelProgress(rewards.points);
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   const left = todos.filter((t) => !t.done).length;
 
   return (
@@ -79,23 +80,11 @@ export default function App() {
         </div>
       )}
       <header className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Todo</h1>
-        <div className="row stats">
-          <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label={`Daily goal ${progress.done} of ${progress.goal}`}>
-            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" strokeWidth="5" />
-            <circle
-              cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" strokeWidth="5" strokeLinecap="round"
-              strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - progress.ratio)}
-              transform="rotate(-90 22 22)"
-            />
-          </svg>
-          <span>
-            <span>{progress.done}/{progress.goal} today</span>{progress.reached && " 🎉"}
-            <br />
-            <span className="muted">{rewards.points} pts · {level.name}</span>
-            <br />
-            <span className="muted">🔥 {streak.current}-day streak · best {streak.best}</span>
-          </span>
+        <div>
+          <h1>Today</h1>
+          <span className="muted">{dateLabel}</span>
+        </div>
+        <div className="row">
           <label style={{ margin: 0 }}>
             Daily goal
             <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
@@ -103,6 +92,25 @@ export default function App() {
           <button type="button" className="icon" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>{theme === "dark" ? "☀️" : "🌙"}</button>
         </div>
       </header>
+      <section className="hero" aria-label="Daily progress">
+        <svg className="ring" width="120" height="120" viewBox="0 0 44 44" role="img" aria-label={`Daily goal ${progress.done} of ${progress.goal}`}>
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="4" />
+          <circle
+            className="ring-fg" cx="22" cy="22" r="18" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round"
+            strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - progress.ratio)}
+            transform="rotate(-90 22 22)"
+          />
+        </svg>
+        <div className="hero-body">
+          <div className="hero-title">{progress.done} of {progress.goal} done{progress.reached && " 🎉"}</div>
+          <div className="hero-level">{level.name}</div>
+          <div className="bar" role="progressbar" aria-label="Progress to next level" aria-valuemin={0} aria-valuemax={level.next ?? rewards.points} aria-valuenow={rewards.points}>
+            <i style={{ width: `${Math.round(level.ratio * 100)}%` }} />
+          </div>
+          <div className="hero-pts">{level.next === null ? `${rewards.points} pts · max level` : `${rewards.points} / ${level.next} pts`}</div>
+          <span className="chip">🔥 {streak.current}-day streak · best {streak.best}</span>
+        </div>
+      </section>
       <form
         className="card add-bar"
         onSubmit={(e) => {

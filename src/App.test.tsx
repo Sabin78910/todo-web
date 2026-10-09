@@ -83,13 +83,13 @@ test("move buttons reorder todos and persist", async () => {
 test("completing a todo awards points and advances the daily goal; unchecking keeps points", async () => {
   render(<App />);
   await userEvent.type(screen.getByLabelText("New todo"), "Write tests{enter}");
-  expect(screen.getByText("0/5 today")).toBeInTheDocument();
+  expect(screen.getByText("0 of 5 done")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("checkbox"));
-  expect(screen.getByText("1/5 today")).toBeInTheDocument();
-  expect(screen.getByText("15 pts · Beginner")).toBeInTheDocument();
+  expect(screen.getByText("1 of 5 done")).toBeInTheDocument();
+  expect(screen.getByText("15 / 100 pts")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("checkbox"));
-  expect(screen.getByText("15 pts · Beginner")).toBeInTheDocument();
+  expect(screen.getByText("15 / 100 pts")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("rewards")!).points).toBe(15);
 });
 
@@ -98,7 +98,7 @@ test("daily goal is editable", async () => {
   const input = screen.getByLabelText("Daily goal");
   await userEvent.clear(input);
   await userEvent.type(input, "3");
-  expect(screen.getByText("0/3 today")).toBeInTheDocument();
+  expect(screen.getByText("0 of 3 done")).toBeInTheDocument();
 });
 
 test("header shows the streak and best streak", async () => {
@@ -210,4 +210,17 @@ test("saved theme is applied on load", () => {
   localStorage.setItem("theme", "dark");
   render(<App />);
   expect(document.documentElement.dataset.theme).toBe("dark");
+});
+
+test("hero card shows Today header, date, level, points bar and streak chip", async () => {
+  render(<App />);
+  expect(screen.getByRole("heading", { name: "Today" })).toBeInTheDocument();
+  const date = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  expect(screen.getByText(date)).toBeInTheDocument();
+  expect(screen.getByText("Beginner")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Progress to next level" })).toHaveAttribute("aria-valuenow", "0");
+  await userEvent.type(screen.getByLabelText("New todo"), "a{enter}");
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByRole("progressbar", { name: "Progress to next level" })).toHaveAttribute("aria-valuenow", "15");
+  expect(screen.getByRole("img", { name: "Daily goal 1 of 5" })).toBeInTheDocument();
 });
