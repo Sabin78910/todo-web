@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 
@@ -287,4 +287,19 @@ test("completing a task unlocks a badge toast and fills the badge shelf", async 
   expect(screen.getByTestId("badge-first-task")).toHaveAttribute("data-earned", "true");
   expect(screen.getByTestId("badge-streak-7")).toHaveAttribute("data-earned", "false");
   expect(JSON.parse(localStorage.getItem("badges")!)).toContain("first-task");
+});
+
+test("shows an Install app button only after beforeinstallprompt", async () => {
+  render(<App />);
+  expect(screen.queryByRole("button", { name: "Install app" })).not.toBeInTheDocument();
+  const event = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
+    prompt: vi.fn().mockResolvedValue(undefined),
+    userChoice: Promise.resolve({ outcome: "accepted" }),
+  });
+  act(() => {
+    window.dispatchEvent(event);
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Install app" }));
+  expect(event.prompt).toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Install app" })).not.toBeInTheDocument();
 });
