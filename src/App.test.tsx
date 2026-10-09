@@ -224,3 +224,39 @@ test("hero card shows Today header, date, level, points bar and streak chip", as
   expect(screen.getByRole("progressbar", { name: "Progress to next level" })).toHaveAttribute("aria-valuenow", "15");
   expect(screen.getByRole("img", { name: "Daily goal 1 of 5" })).toBeInTheDocument();
 });
+
+test("empty state shows an illustration and a button that focuses the input", async () => {
+  render(<App />);
+  expect(screen.getByTestId("empty-illustration")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Add your first task" }));
+  expect(screen.getByLabelText("New todo")).toHaveFocus();
+});
+
+test("empty illustration is hidden once a task exists", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "A{enter}");
+  expect(screen.queryByTestId("empty-illustration")).not.toBeInTheDocument();
+});
+
+test("task row is a card with a round check, priority dot and due chips", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Details" }));
+  await userEvent.type(screen.getByLabelText("New todo"), "Old");
+  await userEvent.type(screen.getByLabelText("Due date"), "2000-01-01");
+  await userEvent.selectOptions(screen.getByLabelText("Priority"), "1");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  expect(screen.getByText("due 2000-01-01")).toHaveClass("due-chip", "due-overdue");
+  expect(screen.getByRole("checkbox").closest("li")).toHaveClass("task");
+  expect(screen.getByTestId("prio-dot")).toHaveClass("prio-1");
+  await userEvent.type(screen.getByLabelText("New todo"), "Now");
+  await userEvent.type(screen.getByLabelText("Due date"), new Date().toLocaleDateString("en-CA"));
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  expect(screen.getByText(/^due \d{4}/, { selector: ".due-today" })).toBeInTheDocument();
+});
+
+test("completed task row gets the done class", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "A{enter}");
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByRole("checkbox").closest("li")).toHaveClass("done");
+});

@@ -1,4 +1,4 @@
-import { addTodo, clearDone, editTodo, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -84,4 +84,13 @@ test("completing a recurring todo creates the next occurrence", () => {
 test("recurring todo without a due date repeats from today", () => {
   const l = addTodo([], "gym", "1", undefined, undefined, "weekly");
   expect(toggleTodo(l, "1", "2026-01-28", "2")[1].due).toBe("2026-02-04");
+});
+
+test("dueStatus classifies overdue, today, later and none", () => {
+  const t = (due?: string, done = false) => ({ id: "1", text: "x", done, due });
+  expect(dueStatus(t("2000-01-01"), "2026-01-01")).toBe("overdue");
+  expect(dueStatus(t("2026-01-01"), "2026-01-01")).toBe("today");
+  expect(dueStatus(t("2026-01-02"), "2026-01-01")).toBe("later");
+  expect(dueStatus(t(), "2026-01-01")).toBeUndefined();
+  expect(dueStatus(t("2000-01-01", true), "2026-01-01")).toBe("later");
 });
