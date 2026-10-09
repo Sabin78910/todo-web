@@ -2,7 +2,24 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem("seeded", "1");
+});
+
+test("first visit shows 3 sample tasks that can be ticked or cleared, only once", async () => {
+  localStorage.clear();
+  const { unmount } = render(<App />);
+  expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+  expect(screen.getByText("Drag me to reorder")).toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
+  await userEvent.click(screen.getByRole("button", { name: /clear/i }));
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  unmount();
+  localStorage.setItem("todos", "[]");
+  render(<App />);
+  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+});
 
 test("adds and completes a todo, persisting it", async () => {
   render(<App />);

@@ -45,6 +45,19 @@ export function load(): Todo[] {
     return [];
   }
 }
+
+const SEEDED = "seeded";
+const SAMPLES = ["Tick me to earn points", "Drag me to reorder", "Set a due date"];
+/** Loads todos; on the very first visit returns sample tasks (once, tracked in localStorage). */
+export function loadOrSeed(): Todo[] {
+  try {
+    if (localStorage.getItem(KEY) !== null || localStorage.getItem(SEEDED)) return load();
+    localStorage.setItem(SEEDED, "1");
+  } catch {
+    return [];
+  }
+  return SAMPLES.map((text, i) => ({ id: `sample-${i + 1}`, text, done: false }));
+}
 export function save(list: Todo[]): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(list));
