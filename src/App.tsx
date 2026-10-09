@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
+import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
@@ -44,11 +45,25 @@ export default function App() {
     return () => clearTimeout(id);
   }, [confetti]);
 
+  const [badges, setBadges] = useState(loadBadges);
+  useEffect(() => saveBadges(badges), [badges]);
+  const [toast, setToast] = useState("");
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(""), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
   const toggle = (id: string) => {
     const t = todos.find((x) => x.id === id);
     if (t && !t.done) {
       const next = award(rewards, t, today);
       setRewards(next);
+      const unlocked = newlyUnlocked(badges, { rewards: next, todos: toggleTodo(todos, id, today), today, hour: new Date().getHours() });
+      if (unlocked.length) {
+        setBadges([...badges, ...unlocked]);
+        setToast(`Badge unlocked: ${unlocked.map((u) => BADGES.find((b) => b.id === u)!.label).join(", ")}`);
+      }
       if (!goalProgress(rewards, today).reached && goalProgress(next, today).reached && shouldCelebrate(loadCelebrated(), today, prefersReducedMotion())) {
         markCelebrated(today);
         setConfetti(true);
@@ -111,6 +126,17 @@ export default function App() {
           <div className="hero-pts">{level.next === null ? `${rewards.points} pts · max level` : `${rewards.points} / ${level.next} pts`}</div>
           <span className="chip">🔥 {streak.current}-day streak · best {streak.best}</span>
         </div>
+      </section>
+      <div role="status" className={toast ? "toast" : "sr-only"}>{toast}</div>
+      <section className="card shelf" aria-label="Badge shelf">
+        {BADGES.map((b) => {
+          const earned = badges.includes(b.id);
+          return (
+            <span key={b.id} className={earned ? "badge earned" : "badge"} data-testid={`badge-${b.id}`} data-earned={earned} title={b.label}>
+              <span aria-hidden="true">{earned ? b.icon : "🔒"}</span> {b.label}
+            </span>
+          );
+        })}
       </section>
       <form
         className="card add-bar"

@@ -277,3 +277,14 @@ test("completed task row gets the done class", async () => {
   await userEvent.click(screen.getByRole("checkbox"));
   expect(screen.getByRole("checkbox").closest("li")).toHaveClass("done");
 });
+
+test("completing a task unlocks a badge toast and fills the badge shelf", async () => {
+  render(<App />);
+  expect(screen.getByRole("region", { name: "Badge shelf" })).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("New todo"), "One{enter}");
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByRole("status")).toHaveTextContent(/First task/);
+  expect(screen.getByTestId("badge-first-task")).toHaveAttribute("data-earned", "true");
+  expect(screen.getByTestId("badge-streak-7")).toHaveAttribute("data-earned", "false");
+  expect(JSON.parse(localStorage.getItem("badges")!)).toContain("first-task");
+});
