@@ -1,4 +1,4 @@
-import { addTodo, clearDone, editTodo, isOverdue, removeTodo, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, isOverdue, moveTodo, removeTodo, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -31,4 +31,15 @@ test("isOverdue is true only for undone todos due before today", () => {
   expect(isOverdue(t, "2026-01-01")).toBe(false);
   expect(isOverdue({ ...t, done: true }, "2026-01-02")).toBe(false);
   expect(isOverdue({ ...t, due: undefined }, "2026-01-02")).toBe(false);
+});
+
+test("moveTodo swaps with neighbour and no-ops at edges or unknown id", () => {
+  const l = ["a", "b", "c"].map((x) => addTodo([], x, x)[0]);
+  const ids = (x: typeof l) => x.map((t) => t.id).join("");
+  expect(ids(moveTodo(l, "b", "up"))).toBe("bac");
+  expect(ids(moveTodo(l, "b", "down"))).toBe("acb");
+  expect(moveTodo(l, "a", "up")).toBe(l);
+  expect(moveTodo(l, "c", "down")).toBe(l);
+  expect(moveTodo(l, "x", "up")).toBe(l);
+  expect(ids(l)).toBe("abc");
 });

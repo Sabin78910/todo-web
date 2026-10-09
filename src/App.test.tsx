@@ -64,3 +64,17 @@ test("overdue todos are shown in red", async () => {
   expect(screen.getByText("Later task")).not.toHaveClass("error");
   expect(JSON.parse(localStorage.getItem("todos")!)[0].due).toBe("2000-01-01");
 });
+
+test("move buttons reorder todos and persist", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "one{enter}");
+  await userEvent.type(screen.getByLabelText("New todo"), "two{enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Move two up" }));
+  expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+    expect.stringContaining("two"),
+    expect.stringContaining("one"),
+  ]);
+  expect(JSON.parse(localStorage.getItem("todos")!).map((t: { text: string }) => t.text)).toEqual(["two", "one"]);
+  expect(screen.getByRole("button", { name: "Move two up" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Move one down" })).toBeDisabled();
+});

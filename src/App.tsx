@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, removeTodo, save, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
   const [todos, setTodos] = useState(load);
@@ -46,7 +46,7 @@ export default function App() {
 
       {shown.length === 0 && <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>}
       <ul className="list card">
-        {shown.map((t) => (
+        {shown.map((t, i) => (
           <li key={t.id}>
             {editing?.id === t.id ? (
               <input
@@ -71,6 +71,8 @@ export default function App() {
                 {t.due && <span className={isOverdue(t, today) ? "error" : "muted"}>due {t.due}</span>}
               </label>
             )}
+            <button className="link" aria-label={`Move ${t.text} up`} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, t.id, "up"))}>↑</button>
+            <button className="link" aria-label={`Move ${t.text} down`} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, t.id, "down"))}>↓</button>
             <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
           </li>
         ))}
