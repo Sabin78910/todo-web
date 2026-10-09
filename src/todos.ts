@@ -4,17 +4,30 @@ export interface Todo {
   done: boolean;
   due?: string; // YYYY-MM-DD
   priority?: Priority;
+  repeat?: Repeat;
 }
+export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
 export type Filter = "all" | "active" | "done";
 
-export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority): Todo[] =>
-  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}) }] : list;
+export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat): Todo[] =>
+  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) }] : list;
 
 export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
 
-export const toggleTodo = (list: Todo[], id: string): Todo[] =>
-  list.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+export const nextDue = (due: string, repeat: Repeat): string => {
+  const d = new Date(`${due}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + (repeat === "weekly" ? 7 : 1));
+  return d.toISOString().slice(0, 10);
+};
+
+/** Toggles a todo; completing a recurring one appends the next occurrence (due from its due date, else today). */
+export const toggleTodo = (list: Todo[], id: string, today?: string, newId: string = crypto.randomUUID()): Todo[] => {
+  const t = list.find((x) => x.id === id);
+  const toggled = list.map((x) => (x.id === id ? { ...x, done: !x.done } : x));
+  if (!t || t.done || !t.repeat || !today) return toggled;
+  return [...toggled, { ...t, id: newId, done: false, due: nextDue(t.due ?? today, t.repeat) }];
+};
 
 export const removeTodo = (list: Todo[], id: string): Todo[] => list.filter((t) => t.id !== id);
 

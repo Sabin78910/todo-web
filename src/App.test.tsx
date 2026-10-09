@@ -161,3 +161,15 @@ test("sets priority with an accessible label and sorts by priority", async () =>
   expect(texts[0]).toContain("Priority 1 (high)");
   expect(JSON.parse(localStorage.getItem("todos")!)[0].priority).toBe(1);
 });
+
+test("completing a recurring todo adds the next occurrence", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "water plants");
+  await userEvent.selectOptions(screen.getByLabelText("Repeat"), "daily");
+  await userEvent.type(screen.getByLabelText("Due date"), "2026-01-31");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  expect(screen.getByLabelText("Repeats daily")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  expect(screen.getByText("due 2026-02-01")).toBeInTheDocument();
+});
