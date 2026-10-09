@@ -54,6 +54,7 @@ test("Escape cancels editing", async () => {
 
 test("overdue todos are shown in red", async () => {
   render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Details" }));
   await userEvent.type(screen.getByLabelText("New todo"), "Old task");
   await userEvent.type(screen.getByLabelText("Due date"), "2000-01-01");
   await userEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -150,6 +151,7 @@ test("no confetti with prefers-reduced-motion", async () => {
 
 test("sets priority with an accessible label and sorts by priority", async () => {
   render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Details" }));
   await userEvent.type(screen.getByLabelText("New todo"), "low{enter}");
   await userEvent.selectOptions(screen.getByLabelText("Priority"), "1");
   await userEvent.type(screen.getByLabelText("New todo"), "urgent{enter}");
@@ -164,6 +166,7 @@ test("sets priority with an accessible label and sorts by priority", async () =>
 
 test("completing a recurring todo adds the next occurrence", async () => {
   render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Details" }));
   await userEvent.type(screen.getByLabelText("New todo"), "water plants");
   await userEvent.selectOptions(screen.getByLabelText("Repeat"), "daily");
   await userEvent.type(screen.getByLabelText("Due date"), "2026-01-31");
@@ -172,4 +175,39 @@ test("completing a recurring todo adds the next occurrence", async () => {
   await userEvent.click(screen.getByRole("checkbox"));
   expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   expect(screen.getByText("due 2026-02-01")).toBeInTheDocument();
+});
+
+test("Details row shows and hides due date, priority and repeat", async () => {
+  render(<App />);
+  const btn = screen.getByRole("button", { name: "Details" });
+  expect(btn).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Repeat")).not.toBeInTheDocument();
+  await userEvent.click(btn);
+  expect(btn).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByLabelText("Due date")).toBeInTheDocument();
+  expect(screen.getByLabelText("Priority")).toBeInTheDocument();
+  expect(screen.getByLabelText("Repeat")).toBeInTheDocument();
+  await userEvent.click(btn);
+  expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+});
+
+test("theme toggle switches theme and persists it", async () => {
+  const { unmount } = render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: /theme/i }));
+  const first = document.documentElement.dataset.theme;
+  expect(["light", "dark"]).toContain(first);
+  expect(localStorage.getItem("theme")).toBe(first);
+  unmount();
+  render(<App />);
+  expect(document.documentElement.dataset.theme).toBe(first);
+  await userEvent.click(screen.getByRole("button", { name: /theme/i }));
+  expect(document.documentElement.dataset.theme).not.toBe(first);
+  expect(localStorage.getItem("theme")).toBe(document.documentElement.dataset.theme);
+});
+
+test("saved theme is applied on load", () => {
+  localStorage.setItem("theme", "dark");
+  render(<App />);
+  expect(document.documentElement.dataset.theme).toBe("dark");
 });
