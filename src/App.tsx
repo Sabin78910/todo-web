@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { addTodo, clearDone, editTodo, type Filter, load, removeTodo, save, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
   const [todos, setTodos] = useState(load);
   const [text, setText] = useState("");
+  const [due, setDue] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
@@ -15,6 +16,7 @@ export default function App() {
   useEffect(() => save(todos), [todos]);
 
   const shown = visible(todos, filter);
+  const today = new Date().toLocaleDateString("en-CA");
   const left = todos.filter((t) => !t.done).length;
 
   return (
@@ -24,11 +26,13 @@ export default function App() {
         className="row card"
         onSubmit={(e) => {
           e.preventDefault();
-          setTodos((l) => addTodo(l, text));
+          setTodos((l) => addTodo(l, text, undefined, due));
           setText("");
+          setDue("");
         }}
       >
         <input aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
+        <input type="date" aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} style={{ width: "auto" }} />
         <button type="submit">Add</button>
       </form>
 
@@ -59,7 +63,12 @@ export default function App() {
             ) : (
               <label className="row" style={{ margin: 0, color: "inherit" }}>
                 <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
-                <span style={{ textDecoration: t.done ? "line-through" : "none" }} onDoubleClick={() => setEditing({ id: t.id, text: t.text })}>{t.text}</span>
+                <span
+                  className={isOverdue(t, today) ? "error" : undefined}
+                  style={{ textDecoration: t.done ? "line-through" : "none" }}
+                  onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
+                >{t.text}</span>
+                {t.due && <span className={isOverdue(t, today) ? "error" : "muted"}>due {t.due}</span>}
               </label>
             )}
             <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
