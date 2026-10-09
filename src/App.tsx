@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
 
@@ -13,9 +14,23 @@ export default function App() {
   const [rewards, setRewards] = useState(() => loadRewards(today));
   useEffect(() => saveRewards(rewards), [rewards]);
 
+  const [confetti, setConfetti] = useState(false);
+  useEffect(() => {
+    if (!confetti) return;
+    const id = setTimeout(() => setConfetti(false), 3000);
+    return () => clearTimeout(id);
+  }, [confetti]);
+
   const toggle = (id: string) => {
     const t = todos.find((x) => x.id === id);
-    if (t && !t.done) setRewards((r) => award(r, t, today));
+    if (t && !t.done) {
+      const next = award(rewards, t, today);
+      setRewards(next);
+      if (!goalProgress(rewards, today).reached && goalProgress(next, today).reached && shouldCelebrate(loadCelebrated(), today, prefersReducedMotion())) {
+        markCelebrated(today);
+        setConfetti(true);
+      }
+    }
     setTodos((l) => toggleTodo(l, id));
   };
 
@@ -34,6 +49,13 @@ export default function App() {
 
   return (
     <main>
+      {confetti && (
+        <div className="confetti" data-testid="confetti" aria-hidden="true">
+          {Array.from({ length: 30 }, (_, i) => (
+            <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 6) * 0.1}s`, background: `hsl(${(i * 47) % 360} 80% 55%)` }} />
+          ))}
+        </div>
+      )}
       <header className="row" style={{ justifyContent: "space-between" }}>
         <h1>Todo</h1>
         <div className="row">
@@ -100,7 +122,7 @@ export default function App() {
               <label className="row" style={{ margin: 0, color: "inherit" }}>
                 <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => toggle(t.id)} />
                 <span
-                  className={isOverdue(t, today) ? "error" : undefined}
+                  className={[isOverdue(t, today) ? "error" : "", t.done ? "checked" : ""].join(" ").trim() || undefined}
                   style={{ textDecoration: t.done ? "line-through" : "none" }}
                   onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
                 >{t.text}</span>
