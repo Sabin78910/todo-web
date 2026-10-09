@@ -303,3 +303,20 @@ test("shows an Install app button only after beforeinstallprompt", async () => {
   expect(event.prompt).toHaveBeenCalled();
   expect(screen.queryByRole("button", { name: "Install app" })).not.toBeInTheDocument();
 });
+
+test("language switch translates the UI, persists, and defaults from navigator.language", async () => {
+  const { unmount } = render(<App />);
+  expect(screen.getByRole("heading", { name: "Today" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "नेपाली" }));
+  expect(screen.getByRole("heading", { name: "आज" })).toBeInTheDocument();
+  expect(screen.getByLabelText("नयाँ काम")).toBeInTheDocument();
+  expect(screen.getByText("० बाँकी")).toBeInTheDocument();
+  expect(localStorage.getItem("lang")).toBe("ne");
+  expect(document.documentElement.lang).toBe("ne");
+  unmount();
+  render(<App />);
+  expect(screen.getByRole("heading", { name: "आज" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "EN" }));
+  expect(screen.getByRole("heading", { name: "Today" })).toBeInTheDocument();
+  expect(localStorage.getItem("lang")).toBe("en");
+});
