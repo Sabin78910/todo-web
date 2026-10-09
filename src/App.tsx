@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
-import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
@@ -11,6 +11,7 @@ export default function App() {
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
   const [priority, setPrio] = useState("");
+  const [repeat, setRepeat] = useState<Repeat | "">("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
@@ -35,7 +36,7 @@ export default function App() {
         setConfetti(true);
       }
     }
-    setTodos((l) => toggleTodo(l, id));
+    setTodos((l) => toggleTodo(l, id, today));
   };
 
   const finishEdit = (commit: boolean) => {
@@ -88,8 +89,9 @@ export default function App() {
         className="row card"
         onSubmit={(e) => {
           e.preventDefault();
-          setTodos((l) => addTodo(l, text, undefined, due, parsePriority(priority)));
+          setTodos((l) => addTodo(l, text, undefined, due, parsePriority(priority), repeat || undefined));
           setText("");
+          setRepeat("");
           setDue("");
         }}
       >
@@ -100,6 +102,11 @@ export default function App() {
           <option value="1">P1</option>
           <option value="2">P2</option>
           <option value="3">P3</option>
+        </select>
+        <select aria-label="Repeat" value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat | "")} style={{ width: "auto" }}>
+          <option value="">No repeat</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
         </select>
         <button type="submit">Add</button>
       </form>
@@ -142,6 +149,7 @@ export default function App() {
                     P{t.priority}<span className="sr-only"> {PRIORITY_LABEL[t.priority]}</span>
                   </span>
                 )}
+                {t.repeat && <span className="muted" aria-label={`Repeats ${t.repeat}`}>🔁</span>}
                 {t.due && <span className={isOverdue(t, today) ? "error" : "muted"}>due {t.due}</span>}
               </label>
             )}

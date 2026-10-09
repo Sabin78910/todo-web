@@ -1,4 +1,4 @@
-import { addTodo, clearDone, editTodo, isOverdue, moveTodo, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -57,4 +57,31 @@ test("sortByPriority orders by priority then due date, unset last, stably", () =
   const l = [mk("a"), mk("b", 3, "2026-01-01"), mk("c", 1, "2026-02-01"), mk("d", 1, "2026-01-01"), mk("e", 1), mk("f", 3, "2026-01-01")];
   expect(sortByPriority(l).map((t) => t.id).join("")).toBe("dcebfa");
   expect(l.map((t) => t.id).join("")).toBe("abcdef");
+});
+
+test("nextDue advances by a day or a week across week, month and year boundaries", () => {
+  expect(nextDue("2026-01-05", "daily")).toBe("2026-01-06");
+  expect(nextDue("2026-01-31", "daily")).toBe("2026-02-01");
+  expect(nextDue("2026-02-28", "daily")).toBe("2026-03-01");
+  expect(nextDue("2028-02-28", "daily")).toBe("2028-02-29");
+  expect(nextDue("2026-12-31", "daily")).toBe("2027-01-01");
+  expect(nextDue("2026-01-05", "weekly")).toBe("2026-01-12");
+  expect(nextDue("2026-01-28", "weekly")).toBe("2026-02-04");
+  expect(nextDue("2026-12-28", "weekly")).toBe("2027-01-04");
+});
+
+test("completing a recurring todo creates the next occurrence", () => {
+  const l = addTodo([], "water", "1", "2026-01-31", 2, "daily");
+  const r = toggleTodo(l, "1", "2026-01-31", "2");
+  expect(r).toHaveLength(2);
+  expect(r[0].done).toBe(true);
+  expect(r[1]).toEqual({ id: "2", text: "water", done: false, due: "2026-02-01", priority: 2, repeat: "daily" });
+  // un-completing or non-recurring todos add nothing
+  expect(toggleTodo(r, "1", "2026-01-31", "3")).toHaveLength(2);
+  expect(toggleTodo(addTodo([], "a", "1"), "1", "2026-01-31", "2")).toHaveLength(1);
+});
+
+test("recurring todo without a due date repeats from today", () => {
+  const l = addTodo([], "gym", "1", undefined, undefined, "weekly");
+  expect(toggleTodo(l, "1", "2026-01-28", "2")[1].due).toBe("2026-02-04");
 });
