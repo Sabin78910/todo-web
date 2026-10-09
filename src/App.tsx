@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { addTodo, clearDone, editTodo, type Filter, load, removeTodo, save, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
   const [todos, setTodos] = useState(load);
@@ -42,7 +42,7 @@ export default function App() {
 
       {shown.length === 0 && <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>}
       <ul className="list card">
-        {shown.map((t) => (
+        {shown.map((t, i) => (
           <li key={t.id}>
             {editing?.id === t.id ? (
               <input
@@ -61,6 +61,12 @@ export default function App() {
                 <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
                 <span style={{ textDecoration: t.done ? "line-through" : "none" }} onDoubleClick={() => setEditing({ id: t.id, text: t.text })}>{t.text}</span>
               </label>
+            )}
+            {filter === "all" && (
+              <>
+                <button className="link" aria-label={`Move ${t.text} up`} disabled={i === 0} onClick={() => setTodos((l) => moveTodo(l, t.id, "up"))}>↑</button>
+                <button className="link" aria-label={`Move ${t.text} down`} disabled={i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, t.id, "down"))}>↓</button>
+              </>
             )}
             <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
           </li>

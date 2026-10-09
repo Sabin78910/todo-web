@@ -51,3 +51,15 @@ test("Escape cancels editing", async () => {
   expect(screen.getByText("Write tests")).toBeInTheDocument();
   expect(screen.queryByLabelText("Edit todo")).not.toBeInTheDocument();
 });
+
+test("move buttons reorder todos", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "one{enter}two{enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Move two up" }));
+  expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+    expect.stringContaining("two"),
+    expect.stringContaining("one"),
+  ]);
+  expect(screen.getByRole("button", { name: "Move two up" })).toBeDisabled();
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].text).toBe("two");
+});

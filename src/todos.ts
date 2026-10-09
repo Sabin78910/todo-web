@@ -37,3 +37,12 @@ export function save(list: Todo[]): void {
 
 export const editTodo = (list: Todo[], id: string, text: string): Todo[] =>
   text.trim() ? list.map((t) => (t.id === id ? { ...t, text: text.trim() } : t)) : list;
+
+export const moveTodo = (list: Todo[], id: string, dir: "up" | "down"): Todo[] => {
+  const i = list.findIndex((t) => t.id === id);
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= list.length) return list;
+  const next = [...list];
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
+};
