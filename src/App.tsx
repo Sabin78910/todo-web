@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
@@ -25,7 +25,7 @@ export default function App() {
   };
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [todos, setTodos] = useState(load);
+  const [todos, setTodos] = useState(loadOrSeed);
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
   const [priority, setPrio] = useState("");

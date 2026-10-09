@@ -1,4 +1,4 @@
-import { addTodo, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -93,4 +93,26 @@ test("dueStatus classifies overdue, today, later and none", () => {
   expect(dueStatus(t("2026-01-02"), "2026-01-01")).toBe("later");
   expect(dueStatus(t(), "2026-01-01")).toBeUndefined();
   expect(dueStatus(t("2000-01-01", true), "2026-01-01")).toBe("later");
+});
+
+describe("loadOrSeed", () => {
+  beforeEach(() => localStorage.clear());
+
+  test("first visit returns the 3 sample tasks and marks them as shown", () => {
+    const l = loadOrSeed();
+    expect(l.map((t) => t.text)).toEqual(["Tick me to earn points", "Drag me to reorder", "Set a due date"]);
+    expect(l.every((t) => !t.done)).toBe(true);
+    expect(localStorage.getItem("seeded")).toBe("1");
+  });
+
+  test("shown only once, even after the list is cleared", () => {
+    loadOrSeed();
+    save([]);
+    expect(loadOrSeed()).toEqual([]);
+  });
+
+  test("does not seed when todos already exist", () => {
+    save(addTodo([], "mine", "1"));
+    expect(loadOrSeed().map((t) => t.text)).toEqual(["mine"]);
+  });
 });
