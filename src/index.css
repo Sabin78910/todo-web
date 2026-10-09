@@ -110,3 +110,8 @@ li.task.done .task-text, li.task.done span.checked { opacity: 0.6; text-decorati
   ul.list li.task, input.check, input.check::after, .task span { animation: none !important; transition: none !important; }
   ul.list li.task:hover { transform: none; }
 }
+
+.shelf { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.badge { padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; opacity: 0.5; border: 1px solid currentColor; }
+.badge.earned { opacity: 1; border-color: var(--accent); }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 8px 16px; border-radius: 8px; z-index: 10; }
