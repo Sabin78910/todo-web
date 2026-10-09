@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal } from "./rewards";
 import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
@@ -8,6 +9,16 @@ export default function App() {
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
+  const today = new Date().toLocaleDateString("en-CA");
+  const [rewards, setRewards] = useState(() => loadRewards(today));
+  useEffect(() => saveRewards(rewards), [rewards]);
+
+  const toggle = (id: string) => {
+    const t = todos.find((x) => x.id === id);
+    if (t && !t.done) setRewards((r) => award(r, t, today));
+    setTodos((l) => toggleTodo(l, id));
+  };
+
   const finishEdit = (commit: boolean) => {
     if (commit && editing) setTodos((l) => editTodo(l, editing.id, editing.text));
     setEditing(null);
@@ -16,12 +27,34 @@ export default function App() {
   useEffect(() => save(todos), [todos]);
 
   const shown = visible(todos, filter);
-  const today = new Date().toLocaleDateString("en-CA");
+  const progress = goalProgress(rewards, today);
+  const level = levelFor(rewards.points);
   const left = todos.filter((t) => !t.done).length;
 
   return (
     <main>
-      <h1>Todo</h1>
+      <header className="row" style={{ justifyContent: "space-between" }}>
+        <h1>Todo</h1>
+        <div className="row">
+          <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label={`Daily goal ${progress.done} of ${progress.goal}`}>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" strokeWidth="5" />
+            <circle
+              cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" strokeWidth="5" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - progress.ratio)}
+              transform="rotate(-90 22 22)"
+            />
+          </svg>
+          <span>
+            <span>{progress.done}/{progress.goal} today</span>{progress.reached && " 🎉"}
+            <br />
+            <span className="muted">{rewards.points} pts · {level.name}</span>
+          </span>
+          <label style={{ margin: 0 }}>
+            Daily goal
+            <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
+          </label>
+        </div>
+      </header>
       <form
         className="row card"
         onSubmit={(e) => {
@@ -62,7 +95,7 @@ export default function App() {
               />
             ) : (
               <label className="row" style={{ margin: 0, color: "inherit" }}>
-                <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => setTodos((l) => toggleTodo(l, t.id))} />
+                <input type="checkbox" style={{ width: "auto" }} checked={t.done} onChange={() => toggle(t.id)} />
                 <span
                   className={isOverdue(t, today) ? "error" : undefined}
                   style={{ textDecoration: t.done ? "line-through" : "none" }}
