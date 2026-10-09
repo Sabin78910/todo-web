@@ -3,11 +3,13 @@ export interface Todo {
   text: string;
   done: boolean;
   due?: string; // YYYY-MM-DD
+  priority?: Priority;
 }
+export type Priority = 1 | 2 | 3; // 1 = highest
 export type Filter = "all" | "active" | "done";
 
-export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string): Todo[] =>
-  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}) }] : list;
+export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority): Todo[] =>
+  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}) }] : list;
 
 export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
 
@@ -49,3 +51,10 @@ export const moveTodo = (list: Todo[], id: string, dir: "up" | "down"): Todo[] =
   [next[i], next[j]] = [next[j], next[i]];
   return next;
 };
+
+export const setPriority = (list: Todo[], id: string, priority?: Priority): Todo[] =>
+  list.map((t) => (t.id === id ? { ...t, priority } : t));
+
+const rank = (p?: Priority) => p ?? 4;
+export const sortByPriority = (list: Todo[]): Todo[] =>
+  [...list].sort((a, b) => rank(a.priority) - rank(b.priority) || (a.due ?? "9999").localeCompare(b.due ?? "9999"));
