@@ -2,11 +2,14 @@ export interface Todo {
   id: string;
   text: string;
   done: boolean;
+  due?: string; // YYYY-MM-DD
 }
 export type Filter = "all" | "active" | "done";
 
-export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID()): Todo[] =>
-  text.trim() ? [...list, { id, text: text.trim(), done: false }] : list;
+export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string): Todo[] =>
+  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}) }] : list;
+
+export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
 
 export const toggleTodo = (list: Todo[], id: string): Todo[] =>
   list.map((t) => (t.id === id ? { ...t, done: !t.done } : t));

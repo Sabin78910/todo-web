@@ -51,3 +51,16 @@ test("Escape cancels editing", async () => {
   expect(screen.getByText("Write tests")).toBeInTheDocument();
   expect(screen.queryByLabelText("Edit todo")).not.toBeInTheDocument();
 });
+
+test("overdue todos are shown in red", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "Old task");
+  await userEvent.type(screen.getByLabelText("Due date"), "2000-01-01");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  await userEvent.type(screen.getByLabelText("New todo"), "Later task");
+  await userEvent.type(screen.getByLabelText("Due date"), "2999-01-01");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  expect(screen.getByText("Old task")).toHaveClass("error");
+  expect(screen.getByText("Later task")).not.toHaveClass("error");
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].due).toBe("2000-01-01");
+});
