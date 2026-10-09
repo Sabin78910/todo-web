@@ -1,7 +1,7 @@
-import { award, DEFAULT_GOAL, goalProgress, levelFor, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
+import { addDays, award, streakInfo, DEFAULT_GOAL, goalProgress, levelFor, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
 
 const todo = { id: "1", text: "a", done: true };
-const fresh: Rewards = { points: 0, goal: DEFAULT_GOAL, day: "2026-01-02", doneToday: 0, awarded: [] };
+const fresh: Rewards = { points: 0, goal: DEFAULT_GOAL, day: "2026-01-02", doneToday: 0, awarded: [], metDays: [], best: 0 };
 
 test("pointsFor gives more for on-time completion", () => {
   expect(pointsFor(todo, "2026-01-02")).toBe(15);
@@ -55,4 +55,37 @@ test("rewards persist in localStorage and tolerate bad data", () => {
   expect(loadRewards("2026-01-02").points).toBe(42);
   localStorage.setItem("rewards", "{bad");
   expect(loadRewards("2026-01-02").points).toBe(0);
+});
+
+test("addDays is calendar-safe across month, year, leap and DST boundaries", () => {
+  expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+  expect(addDays("2024-03-01", -1)).toBe("2024-02-29");
+  expect(addDays("2026-03-08", 1)).toBe("2026-03-09");
+  expect(addDays("2026-11-01", 1)).toBe("2026-11-02");
+});
+
+test("streak counts consecutive days, ignoring in-progress today", () => {
+  const r = { ...fresh, day: "2026-01-05", metDays: ["2026-01-03", "2026-01-04"], best: 2 };
+  expect(streakInfo(r, "2026-01-05")).toEqual({ current: 2, best: 2 });
+});
+
+test("streak includes today once goal is reached", () => {
+  const r = { ...fresh, goal: 1, day: "2026-01-05", doneToday: 1, metDays: ["2026-01-04"], best: 1 };
+  expect(streakInfo(r, "2026-01-05")).toEqual({ current: 2, best: 2 });
+});
+
+test("a missed day resets the streak but keeps best", () => {
+  const r = { ...fresh, day: "2026-01-02", metDays: ["2025-12-30", "2025-12-31"], best: 2 };
+  expect(streakInfo(r, "2026-01-03")).toEqual({ current: 0, best: 2 });
+  expect(streakInfo({ ...r, metDays: ["2025-12-28", "2026-01-02"] }, "2026-01-03").current).toBe(1);
+});
+
+test("award records the day when the goal is met and updates best", () => {
+  let r: Rewards = { ...fresh, goal: 2, metDays: ["2026-01-01"], best: 1 };
+  r = award(r, todo, "2026-01-02");
+  expect(r.metDays).toEqual(["2026-01-01"]);
+  r = award(r, { ...todo, id: "2" }, "2026-01-02");
+  expect(r.metDays).toEqual(["2026-01-01", "2026-01-02"]);
+  expect(r.best).toBe(2);
 });

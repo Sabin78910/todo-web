@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal } from "./rewards";
+import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
 
 export default function App() {
@@ -28,6 +28,7 @@ export default function App() {
 
   const shown = visible(todos, filter);
   const progress = goalProgress(rewards, today);
+  const streak = streakInfo(rewards, today);
   const level = levelFor(rewards.points);
   const left = todos.filter((t) => !t.done).length;
 
@@ -48,6 +49,8 @@ export default function App() {
             <span>{progress.done}/{progress.goal} today</span>{progress.reached && " 🎉"}
             <br />
             <span className="muted">{rewards.points} pts · {level.name}</span>
+            <br />
+            <span className="muted">🔥 {streak.current}-day streak · best {streak.best}</span>
           </span>
           <label style={{ margin: 0 }}>
             Daily goal
