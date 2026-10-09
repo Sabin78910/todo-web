@@ -147,3 +147,17 @@ test("no confetti with prefers-reduced-motion", async () => {
   // @ts-expect-error cleanup
   delete window.matchMedia;
 });
+
+test("sets priority with an accessible label and sorts by priority", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "low{enter}");
+  await userEvent.selectOptions(screen.getByLabelText("Priority"), "1");
+  await userEvent.type(screen.getByLabelText("New todo"), "urgent{enter}");
+  await userEvent.selectOptions(screen.getByLabelText("Priority for low"), "3");
+  expect(screen.getByTitle("Priority 3 (low)")).toHaveAttribute("data-priority", "3");
+  await userEvent.click(screen.getByRole("button", { name: "Sort by priority" }));
+  const texts = screen.getAllByRole("listitem").map((li) => li.textContent);
+  expect(texts[0]).toContain("urgent");
+  expect(texts[0]).toContain("Priority 1 (high)");
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].priority).toBe(1);
+});

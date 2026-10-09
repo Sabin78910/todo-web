@@ -1,4 +1,4 @@
-import { addTodo, clearDone, editTodo, isOverdue, moveTodo, removeTodo, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, isOverdue, moveTodo, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -42,4 +42,19 @@ test("moveTodo swaps with neighbour and no-ops at edges or unknown id", () => {
   expect(moveTodo(l, "c", "down")).toBe(l);
   expect(moveTodo(l, "x", "up")).toBe(l);
   expect(ids(l)).toBe("abc");
+});
+
+test("addTodo stores an optional priority and setPriority changes or clears it", () => {
+  expect(addTodo([], "a", "1", undefined, 2)[0].priority).toBe(2);
+  expect(addTodo([], "a", "1")[0].priority).toBeUndefined();
+  const l = addTodo([], "a", "1");
+  expect(setPriority(l, "1", 1)[0].priority).toBe(1);
+  expect(setPriority(setPriority(l, "1", 3), "1", undefined)[0].priority).toBeUndefined();
+});
+
+test("sortByPriority orders by priority then due date, unset last, stably", () => {
+  const mk = (id: string, priority?: 1 | 2 | 3, due?: string) => ({ id, text: id, done: false, priority, due });
+  const l = [mk("a"), mk("b", 3, "2026-01-01"), mk("c", 1, "2026-02-01"), mk("d", 1, "2026-01-01"), mk("e", 1), mk("f", 3, "2026-01-01")];
+  expect(sortByPriority(l).map((t) => t.id).join("")).toBe("dcebfa");
+  expect(l.map((t) => t.id).join("")).toBe("abcdef");
 });

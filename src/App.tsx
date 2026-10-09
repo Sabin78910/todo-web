@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { award, goalProgress, levelFor, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
-import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, removeTodo, save, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, type Priority, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+
+const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
+const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
 
 export default function App() {
   const [todos, setTodos] = useState(load);
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
+  const [priority, setPrio] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
@@ -84,13 +88,19 @@ export default function App() {
         className="row card"
         onSubmit={(e) => {
           e.preventDefault();
-          setTodos((l) => addTodo(l, text, undefined, due));
+          setTodos((l) => addTodo(l, text, undefined, due, parsePriority(priority)));
           setText("");
           setDue("");
         }}
       >
         <input aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
         <input type="date" aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} style={{ width: "auto" }} />
+        <select aria-label="Priority" value={priority} onChange={(e) => setPrio(e.target.value)} style={{ width: "auto" }}>
+          <option value="">No priority</option>
+          <option value="1">P1</option>
+          <option value="2">P2</option>
+          <option value="3">P3</option>
+        </select>
         <button type="submit">Add</button>
       </form>
 
@@ -99,6 +109,7 @@ export default function App() {
           <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{f}</button>
         ))}
         <span className="muted">{left} left</span>
+        <button onClick={() => setTodos(sortByPriority)}>Sort by priority</button>
         <button className="link" onClick={() => setTodos(clearDone)}>Clear done</button>
       </div>
 
@@ -126,9 +137,20 @@ export default function App() {
                   style={{ textDecoration: t.done ? "line-through" : "none" }}
                   onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
                 >{t.text}</span>
+                {t.priority && (
+                  <span className={`prio prio-${t.priority}`} data-priority={t.priority} title={PRIORITY_LABEL[t.priority]}>
+                    P{t.priority}<span className="sr-only"> {PRIORITY_LABEL[t.priority]}</span>
+                  </span>
+                )}
                 {t.due && <span className={isOverdue(t, today) ? "error" : "muted"}>due {t.due}</span>}
               </label>
             )}
+            <select aria-label={`Priority for ${t.text}`} value={t.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, t.id, parsePriority(e.target.value)))}>
+              <option value="">None</option>
+              <option value="1">P1</option>
+              <option value="2">P2</option>
+              <option value="3">P3</option>
+            </select>
             <button className="link" aria-label={`Move ${t.text} up`} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, t.id, "up"))}>↑</button>
             <button className="link" aria-label={`Move ${t.text} down`} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, t.id, "down"))}>↓</button>
             <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
