@@ -3,10 +3,10 @@ import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate }
 import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
+import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
 import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
-const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
 
 type Theme = "light" | "dark";
 const systemTheme = (): Theme => (typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -25,6 +25,16 @@ export default function App() {
     localStorage.setItem("theme", next);
     setTheme(next);
   };
+  const [lang, setLang] = useState<Lang>(loadLang);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+  const chooseLang = (l: Lang) => {
+    saveLang(l);
+    setLang(l);
+  };
+  const t = (key: Key, params?: Record<string, string | number>) => tr(lang, key, params);
+  const n = (x: number) => formatNumber(lang, x);
   const { canInstall, install } = useInstallPrompt();
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -57,14 +67,14 @@ export default function App() {
   }, [toast]);
 
   const toggle = (id: string) => {
-    const t = todos.find((x) => x.id === id);
-    if (t && !t.done) {
-      const next = award(rewards, t, today);
+    const item = todos.find((x) => x.id === id);
+    if (item && !item.done) {
+      const next = award(rewards, item, today);
       setRewards(next);
       const unlocked = newlyUnlocked(badges, { rewards: next, todos: toggleTodo(todos, id, today), today, hour: new Date().getHours() });
       if (unlocked.length) {
         setBadges([...badges, ...unlocked]);
-        setToast(`Badge unlocked: ${unlocked.map((u) => BADGES.find((b) => b.id === u)!.label).join(", ")}`);
+        setToast(t("badge.unlocked", { names: unlocked.map((u) => t(`badge.${u}` as Key)).join(", ") }));
       }
       if (!goalProgress(rewards, today).reached && goalProgress(next, today).reached && shouldCelebrate(loadCelebrated(), today, prefersReducedMotion())) {
         markCelebrated(today);
@@ -85,8 +95,8 @@ export default function App() {
   const progress = goalProgress(rewards, today);
   const streak = streakInfo(rewards, today);
   const level = levelProgress(rewards.points);
-  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-  const left = todos.filter((t) => !t.done).length;
+  const dateLabel = formatDate(lang, new Date(), { weekday: "long", month: "long", day: "numeric" });
+  const left = todos.filter((x) => !x.done).length;
 
   return (
     <main>
@@ -99,20 +109,24 @@ export default function App() {
       )}
       <header className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <h1>Today</h1>
+          <h1>{t("app.today")}</h1>
           <span className="muted">{dateLabel}</span>
         </div>
         <div className="row">
+          <div className="segmented" role="group" aria-label={t("lang.label")}>
+            <button type="button" aria-pressed={lang === "en"} onClick={() => chooseLang("en")}>EN</button>
+            <button type="button" aria-pressed={lang === "ne"} onClick={() => chooseLang("ne")}>नेपाली</button>
+          </div>
           <label style={{ margin: 0 }}>
-            Daily goal
+            {t("goal.label")}
             <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
           </label>
-          {canInstall && <button type="button" onClick={install}>Install app</button>}
-          <button type="button" className="icon" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>{theme === "dark" ? "☀️" : "🌙"}</button>
+          {canInstall && <button type="button" onClick={install}>{t("install")}</button>}
+          <button type="button" className="icon" onClick={toggleTheme} aria-label={t(theme === "dark" ? "theme.toLight" : "theme.toDark")}>{theme === "dark" ? "☀️" : "🌙"}</button>
         </div>
       </header>
-      <section className="hero" aria-label="Daily progress">
-        <svg className="ring" width="120" height="120" viewBox="0 0 44 44" role="img" aria-label={`Daily goal ${progress.done} of ${progress.goal}`}>
+      <section className="hero" aria-label={t("progress.section")}>
+        <svg className="ring" width="120" height="120" viewBox="0 0 44 44" role="img" aria-label={t("progress.ring", { done: n(progress.done), goal: n(progress.goal) })}>
           <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="4" />
           <circle
             className="ring-fg" cx="22" cy="22" r="18" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round"
@@ -121,22 +135,23 @@ export default function App() {
           />
         </svg>
         <div className="hero-body">
-          <div className="hero-title">{progress.done} of {progress.goal} done{progress.reached && " 🎉"}</div>
-          <div className="hero-level">{level.name}</div>
-          <div className="bar" role="progressbar" aria-label="Progress to next level" aria-valuemin={0} aria-valuemax={level.next ?? rewards.points} aria-valuenow={rewards.points}>
+          <div className="hero-title">{t("progress.title", { done: n(progress.done), goal: n(progress.goal) })}{progress.reached && " 🎉"}</div>
+          <div className="hero-level">{t(`level.${level.name}` as Key)}</div>
+          <div className="bar" role="progressbar" aria-label={t("progress.level")} aria-valuemin={0} aria-valuemax={level.next ?? rewards.points} aria-valuenow={rewards.points}>
             <i style={{ width: `${Math.round(level.ratio * 100)}%` }} />
           </div>
-          <div className="hero-pts">{level.next === null ? `${rewards.points} pts · max level` : `${rewards.points} / ${level.next} pts`}</div>
-          <span className="chip">🔥 {streak.current}-day streak · best {streak.best}</span>
+          <div className="hero-pts">{level.next === null ? t("progress.max", { points: n(rewards.points) }) : t("progress.pts", { points: n(rewards.points), next: n(level.next) })}</div>
+          <span className="chip">🔥 {t("streak", { current: n(streak.current), best: n(streak.best) })}</span>
         </div>
       </section>
       <div role="status" className={toast ? "toast" : "sr-only"}>{toast}</div>
-      <section className="card shelf" aria-label="Badge shelf">
+      <section className="card shelf" aria-label={t("badge.shelf")}>
         {BADGES.map((b) => {
           const earned = badges.includes(b.id);
+          const label = t(`badge.${b.id}` as Key);
           return (
-            <span key={b.id} className={earned ? "badge earned" : "badge"} data-testid={`badge-${b.id}`} data-earned={earned} title={b.label}>
-              <span aria-hidden="true">{earned ? b.icon : "🔒"}</span> {b.label}
+            <span key={b.id} className={earned ? "badge earned" : "badge"} data-testid={`badge-${b.id}`} data-earned={earned} title={label}>
+              <span aria-hidden="true">{earned ? b.icon : "🔒"}</span> {label}
             </span>
           );
         })}
@@ -152,37 +167,37 @@ export default function App() {
         }}
       >
         <div className="row add-main">
-          <input ref={inputRef} aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
-          <button type="button" className="secondary" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>Details</button>
-          <button type="submit">Add</button>
+          <input ref={inputRef} aria-label={t("add.label")} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("add.placeholder")} />
+          <button type="button" className="secondary" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>{t("add.details")}</button>
+          <button type="submit">{t("add.submit")}</button>
         </div>
         {showDetails && (
           <div className="details">
-        <input type="date" aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} />
-        <select aria-label="Priority" value={priority} onChange={(e) => setPrio(e.target.value)}>
-          <option value="">No priority</option>
-          <option value="1">P1</option>
-          <option value="2">P2</option>
-          <option value="3">P3</option>
+        <input type="date" aria-label={t("field.due")} value={due} onChange={(e) => setDue(e.target.value)} />
+        <select aria-label={t("field.priority")} value={priority} onChange={(e) => setPrio(e.target.value)}>
+          <option value="">{t("prio.none")}</option>
+          <option value="1">{t("prio.short", { n: n(1) })}</option>
+          <option value="2">{t("prio.short", { n: n(2) })}</option>
+          <option value="3">{t("prio.short", { n: n(3) })}</option>
         </select>
-        <select aria-label="Repeat" value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat | "")}>
-          <option value="">No repeat</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
+        <select aria-label={t("field.repeat")} value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat | "")}>
+          <option value="">{t("repeat.none")}</option>
+          <option value="daily">{t("repeat.daily")}</option>
+          <option value="weekly">{t("repeat.weekly")}</option>
         </select>
           </div>
         )}
       </form>
 
       <div className="toolbar">
-        <div className="segmented" role="group" aria-label="Filter">
+        <div className="segmented" role="group" aria-label={t("filter.group")}>
         {(["all", "active", "done"] as Filter[]).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{f}</button>
+          <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{t(`filter.${f}`)}</button>
         ))}
         </div>
-        <span className="muted">{left} left</span>
-        <button onClick={() => setTodos(sortByPriority)}>Sort by priority</button>
-        <button className="link" onClick={() => setTodos(clearDone)}>Clear done</button>
+        <span className="muted">{t("left", { n: n(left) })}</span>
+        <button onClick={() => setTodos(sortByPriority)}>{t("sort")}</button>
+        <button className="link" onClick={() => setTodos(clearDone)}>{t("clear")}</button>
       </div>
 
       {shown.length === 0 && (
@@ -195,19 +210,19 @@ export default function App() {
               <circle cx="14" cy="76" r="4" fill="var(--streak)" />
             </svg>
           )}
-          <p className="muted">{todos.length === 0 ? "No todos yet" : "Nothing here"}</p>
-          {todos.length === 0 && <button type="button" onClick={() => inputRef.current?.focus()}>Add your first task</button>}
+          <p className="muted">{todos.length === 0 ? t("empty.none") : t("empty.filtered")}</p>
+          {todos.length === 0 && <button type="button" onClick={() => inputRef.current?.focus()}>{t("empty.cta")}</button>}
         </div>
       )}
       <ul className="list card">
-        {shown.map((t, i) => (
-          <li key={t.id} className={t.done ? "task done" : "task"}>
-            {editing?.id === t.id ? (
+        {shown.map((todo, i) => (
+          <li key={todo.id} className={todo.done ? "task done" : "task"}>
+            {editing?.id === todo.id ? (
               <input
-                aria-label="Edit todo"
+                aria-label={t("edit.label")}
                 autoFocus
                 value={editing.text}
-                onChange={(e) => setEditing({ id: t.id, text: e.target.value })}
+                onChange={(e) => setEditing({ id: todo.id, text: e.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") finishEdit(true);
                   else if (e.key === "Escape") finishEdit(false);
@@ -216,30 +231,30 @@ export default function App() {
               />
             ) : (
               <label className="row" style={{ margin: 0, color: "inherit" }}>
-                <input type="checkbox" className="check" checked={t.done} onChange={() => toggle(t.id)} />
-                {t.priority && <i className={`prio-dot prio-${t.priority}`} data-testid="prio-dot" aria-hidden="true" />}
+                <input type="checkbox" className="check" checked={todo.done} onChange={() => toggle(todo.id)} />
+                {todo.priority && <i className={`prio-dot prio-${todo.priority}`} data-testid="prio-dot" aria-hidden="true" />}
                 <span
-                  className={[isOverdue(t, today) ? "error" : "", t.done ? "checked" : ""].join(" ").trim() || undefined}
-                                  onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
-                >{t.text}</span>
-                {t.priority && (
-                  <span className={`prio prio-${t.priority}`} data-priority={t.priority} title={PRIORITY_LABEL[t.priority]}>
-                    P{t.priority}<span className="sr-only"> {PRIORITY_LABEL[t.priority]}</span>
+                  className={[isOverdue(todo, today) ? "error" : "", todo.done ? "checked" : ""].join(" ").trim() || undefined}
+                                  onDoubleClick={() => setEditing({ id: todo.id, text: todo.text })}
+                >{todo.text}</span>
+                {todo.priority && (
+                  <span className={`prio prio-${todo.priority}`} data-priority={todo.priority} title={t(`prio.${todo.priority}`)}>
+                    {t("prio.short", { n: n(todo.priority) })}<span className="sr-only"> {t(`prio.${todo.priority}`)}</span>
                   </span>
                 )}
-                {t.repeat && <span className="muted" aria-label={`Repeats ${t.repeat}`}>🔁</span>}
-                {t.due && <span className={`due-chip due-${dueStatus(t, today)}`}>due {t.due}</span>}
+                {todo.repeat && <span className="muted" aria-label={t("repeat.label", { repeat: t(`repeat.${todo.repeat}`).toLowerCase() })}>🔁</span>}
+                {todo.due && <span className={`due-chip due-${dueStatus(todo, today)}`}>{t("due", { date: formatDay(lang, todo.due) })}</span>}
               </label>
             )}
-            <select aria-label={`Priority for ${t.text}`} value={t.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, t.id, parsePriority(e.target.value)))}>
-              <option value="">None</option>
-              <option value="1">P1</option>
-              <option value="2">P2</option>
-              <option value="3">P3</option>
+            <select aria-label={t("prio.for", { text: todo.text })} value={todo.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, todo.id, parsePriority(e.target.value)))}>
+              <option value="">{t("prio.noneShort")}</option>
+              <option value="1">{t("prio.short", { n: n(1) })}</option>
+              <option value="2">{t("prio.short", { n: n(2) })}</option>
+              <option value="3">{t("prio.short", { n: n(3) })}</option>
             </select>
-            <button className="link" aria-label={`Move ${t.text} up`} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, t.id, "up"))}>↑</button>
-            <button className="link" aria-label={`Move ${t.text} down`} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, t.id, "down"))}>↓</button>
-            <button className="link" aria-label={`Delete ${t.text}`} onClick={() => setTodos((l) => removeTodo(l, t.id))}>✕</button>
+            <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
+            <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
+            <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => setTodos((l) => removeTodo(l, todo.id))}>✕</button>
           </li>
         ))}
       </ul>
