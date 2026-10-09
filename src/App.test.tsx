@@ -78,3 +78,24 @@ test("move buttons reorder todos and persist", async () => {
   expect(screen.getByRole("button", { name: "Move two up" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Move one down" })).toBeDisabled();
 });
+
+test("completing a todo awards points and advances the daily goal; unchecking keeps points", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "Write tests{enter}");
+  expect(screen.getByText("0/5 today")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByText("1/5 today")).toBeInTheDocument();
+  expect(screen.getByText("15 pts · Beginner")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getByRole("checkbox"));
+  expect(screen.getByText("15 pts · Beginner")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("rewards")!).points).toBe(15);
+});
+
+test("daily goal is editable", async () => {
+  render(<App />);
+  const input = screen.getByLabelText("Daily goal");
+  await userEvent.clear(input);
+  await userEvent.type(input, "3");
+  expect(screen.getByText("0/3 today")).toBeInTheDocument();
+});
