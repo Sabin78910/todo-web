@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
+import { useInstallPrompt } from "./install";
 import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
@@ -24,6 +25,7 @@ export default function App() {
     localStorage.setItem("theme", next);
     setTheme(next);
   };
+  const { canInstall, install } = useInstallPrompt();
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [todos, setTodos] = useState(loadOrSeed);
@@ -105,6 +107,7 @@ export default function App() {
             Daily goal
             <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
           </label>
+          {canInstall && <button type="button" onClick={install}>Install app</button>}
           <button type="button" className="icon" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>{theme === "dark" ? "☀️" : "🌙"}</button>
         </div>
       </header>
