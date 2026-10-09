@@ -6,7 +6,24 @@ import { addTodo, clearDone, editTodo, type Filter, isOverdue, load, moveTodo, t
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 const PRIORITY_LABEL = { 1: "Priority 1 (high)", 2: "Priority 2 (medium)", 3: "Priority 3 (low)" } as const;
 
+type Theme = "light" | "dark";
+const systemTheme = (): Theme => (typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+const loadTheme = (): Theme => {
+  const saved = localStorage.getItem("theme");
+  return saved === "light" || saved === "dark" ? saved : systemTheme();
+};
+
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    localStorage.setItem("theme", next);
+    setTheme(next);
+  };
+  const [showDetails, setShowDetails] = useState(false);
   const [todos, setTodos] = useState(load);
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
@@ -63,7 +80,7 @@ export default function App() {
       )}
       <header className="row" style={{ justifyContent: "space-between" }}>
         <h1>Todo</h1>
-        <div className="row">
+        <div className="row stats">
           <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label={`Daily goal ${progress.done} of ${progress.goal}`}>
             <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" strokeWidth="5" />
             <circle
@@ -83,10 +100,11 @@ export default function App() {
             Daily goal
             <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
           </label>
+          <button type="button" className="icon" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>{theme === "dark" ? "☀️" : "🌙"}</button>
         </div>
       </header>
       <form
-        className="row card"
+        className="card add-bar"
         onSubmit={(e) => {
           e.preventDefault();
           setTodos((l) => addTodo(l, text, undefined, due, parsePriority(priority), repeat || undefined));
@@ -95,26 +113,35 @@ export default function App() {
           setDue("");
         }}
       >
-        <input aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
-        <input type="date" aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} style={{ width: "auto" }} />
-        <select aria-label="Priority" value={priority} onChange={(e) => setPrio(e.target.value)} style={{ width: "auto" }}>
+        <div className="row add-main">
+          <input aria-label="New todo" value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing?" />
+          <button type="button" className="secondary" aria-expanded={showDetails} onClick={() => setShowDetails((v) => !v)}>Details</button>
+          <button type="submit">Add</button>
+        </div>
+        {showDetails && (
+          <div className="details">
+        <input type="date" aria-label="Due date" value={due} onChange={(e) => setDue(e.target.value)} />
+        <select aria-label="Priority" value={priority} onChange={(e) => setPrio(e.target.value)}>
           <option value="">No priority</option>
           <option value="1">P1</option>
           <option value="2">P2</option>
           <option value="3">P3</option>
         </select>
-        <select aria-label="Repeat" value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat | "")} style={{ width: "auto" }}>
+        <select aria-label="Repeat" value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat | "")}>
           <option value="">No repeat</option>
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
         </select>
-        <button type="submit">Add</button>
+          </div>
+        )}
       </form>
 
-      <div className="row" style={{ marginBottom: 12 }}>
+      <div className="toolbar">
+        <div className="segmented" role="group" aria-label="Filter">
         {(["all", "active", "done"] as Filter[]).map((f) => (
           <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{f}</button>
         ))}
+        </div>
         <span className="muted">{left} left</span>
         <button onClick={() => setTodos(sortByPriority)}>Sort by priority</button>
         <button className="link" onClick={() => setTodos(clearDone)}>Clear done</button>
