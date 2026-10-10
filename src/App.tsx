@@ -141,7 +141,7 @@ export default function App() {
 
   useEffect(() => save(todos), [todos]);
 
-  const shown = searchTodos(visible(todos, filter), query);
+  const shown = searchTodos(visible(todos, filter, today), query);
   const progress = goalProgress(rewards, today);
   const streak = streakInfo(rewards, today);
   const level = levelProgress(rewards.points);
@@ -258,7 +258,7 @@ export default function App() {
 
       <div className="toolbar">
         <div className="segmented" role="group" aria-label={t("filter.group")}>
-        {(["all", "active", "done"] as Filter[]).map((f) => (
+        {(["all", "active", "done", "today"] as Filter[]).map((f) => (
           <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{t(`filter.${f}`)}</button>
         ))}
         </div>
