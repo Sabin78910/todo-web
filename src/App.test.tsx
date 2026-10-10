@@ -462,3 +462,25 @@ test("Today filter shows overdue and due-today todos, with empty state and reord
   await userEvent.click(screen.getAllByRole("checkbox")[0]);
   expect(screen.getByText("Nothing here")).toBeInTheDocument();
 });
+
+test("subtasks can be added, ticked and removed with progress shown", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "Trip{enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Subtasks for Trip" }));
+  const input = screen.getByLabelText("New subtask for Trip");
+  await userEvent.type(input, "Pack{enter}");
+  await userEvent.type(input, "Book{enter}");
+  expect(screen.getByText("0/2")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("checkbox", { name: "Pack" }));
+  expect(screen.getByText("1/2")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].subtasks).toHaveLength(2);
+  await userEvent.click(screen.getByRole("button", { name: "Delete subtask Book" }));
+  expect(screen.getByText("1/1")).toBeInTheDocument();
+});
+
+test("subtask progress is translated to Nepali", async () => {
+  localStorage.setItem("todos", JSON.stringify([{ id: "1", text: "Trip", done: false, subtasks: [{ id: "s", text: "Pack", done: true }] }]));
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "नेपाली" }));
+  expect(screen.getByText("१/१")).toBeInTheDocument();
+});

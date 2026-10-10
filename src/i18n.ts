@@ -71,6 +71,11 @@ const en = {
   "import.label": "Import backup",
   "import.confirm": "Replace your current todos with this backup?",
   "import.error": "Invalid backup file",
+  "sub.toggle": "Subtasks for {text}",
+  "sub.add": "New subtask for {text}",
+  "sub.delete": "Delete subtask {text}",
+  "sub.progress": "{done}/{total}",
+  "sub.progressLabel": "{done} of {total} subtasks done",
 } as const;
 
 export type Key = keyof typeof en;
@@ -146,6 +151,11 @@ const ne: Record<Key, string> = {
   "import.label": "ब्याकअप आयात",
   "import.confirm": "हालका कामहरू यो ब्याकअपले बदल्ने?",
   "import.error": "अमान्य ब्याकअप फाइल",
+  "sub.toggle": "{text} का उपकार्यहरू",
+  "sub.add": "{text} को नयाँ उपकार्य",
+  "sub.delete": "उपकार्य {text} मेटाउनुहोस्",
+  "sub.progress": "{done}/{total}",
+  "sub.progressLabel": "{total} मध्ये {done} उपकार्य सकियो",
 };
 
 export const DICTIONARY: Record<Lang, Record<Key, string>> = { en, ne };
