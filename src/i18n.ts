@@ -62,6 +62,9 @@ const en = {
   "move.down": "Move {text} down",
   "delete": "Delete {text}",
   "due": "due {date}",
+  "undo.deleted": "Todo deleted",
+  "undo.cleared": "Cleared {n} done",
+  "undo": "Undo",
 } as const;
 
 export type Key = keyof typeof en;
@@ -128,6 +131,9 @@ const ne: Record<Key, string> = {
   "move.down": "{text} तल सार्नुहोस्",
   "delete": "{text} मेटाउनुहोस्",
   "due": "म्याद {date}",
+  "undo.deleted": "काम मेटाइयो",
+  "undo.cleared": "{n} सकिएका हटाइयो",
+  "undo": "पूर्ववत् गर्नुहोस्",
 };
 
 export const DICTIONARY: Record<Lang, Record<Key, string>> = { en, ne };

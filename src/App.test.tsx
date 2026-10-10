@@ -320,3 +320,30 @@ test("language switch translates the UI, persists, and defaults from navigator.l
   expect(screen.getByRole("heading", { name: "Today" })).toBeInTheDocument();
   expect(localStorage.getItem("lang")).toBe("en");
 });
+
+test("undo restores a deleted todo at its original position", async () => {
+  localStorage.setItem("todos", JSON.stringify(["a", "b", "c"].map((x) => ({ id: x, text: x, done: false }))));
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Delete b" }));
+  expect(screen.queryByText("b")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+  expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+  expect(JSON.parse(localStorage.getItem("todos")!).map((t: { id: string }) => t.id)).toEqual(["a", "b", "c"]);
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+});
+
+test("undo restores cleared done todos, and the toast auto-dismisses", async () => {
+  localStorage.setItem("todos", JSON.stringify([true, false, true].map((done, i) => ({ id: `t${i}`, text: `t${i}`, done }))));
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: /clear done/i }));
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+  expect(JSON.parse(localStorage.getItem("todos")!).map((t: { id: string }) => t.id)).toEqual(["t0", "t1", "t2"]);
+
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  await userEvent.click(screen.getByRole("button", { name: "Delete t1" }));
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  act(() => { vi.advanceTimersByTime(6100); });
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  vi.useRealTimers();
+});

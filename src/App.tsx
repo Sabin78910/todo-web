@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Repeat, removeTodo, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, removeTodo, removedWithIndex, restoreTodos, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -65,6 +65,23 @@ export default function App() {
     const id = setTimeout(() => setToast(""), 4000);
     return () => clearTimeout(id);
   }, [toast]);
+
+  const [undo, setUndo] = useState<{ message: string; removed: Removed[] } | null>(null);
+  useEffect(() => {
+    if (!undo) return;
+    const id = setTimeout(() => setUndo(null), 6000);
+    return () => clearTimeout(id);
+  }, [undo]);
+  const remove = (pred: (x: Todo) => boolean, message: string, apply: (l: Todo[]) => Todo[]) => {
+    const removed = removedWithIndex(todos, pred);
+    if (!removed.length) return;
+    setTodos(apply);
+    setUndo({ message, removed });
+  };
+  const doUndo = () => {
+    if (undo) setTodos((l) => restoreTodos(l, undo.removed));
+    setUndo(null);
+  };
 
   const toggle = (id: string) => {
     const item = todos.find((x) => x.id === id);
@@ -145,6 +162,12 @@ export default function App() {
         </div>
       </section>
       <div role="status" className={toast ? "toast" : "sr-only"}>{toast}</div>
+      {undo && (
+        <div role="status" className="toast undo-toast">
+          {undo.message}
+          <button type="button" onClick={doUndo}>{t("undo")}</button>
+        </div>
+      )}
       <section className="card shelf" aria-label={t("badge.shelf")}>
         {BADGES.map((b) => {
           const earned = badges.includes(b.id);
@@ -197,7 +220,7 @@ export default function App() {
         </div>
         <span className="muted">{t("left", { n: n(left) })}</span>
         <button onClick={() => setTodos(sortByPriority)}>{t("sort")}</button>
-        <button className="link" onClick={() => setTodos(clearDone)}>{t("clear")}</button>
+        <button className="link" onClick={() => remove((x) => x.done, t("undo.cleared", { n: n(todos.filter((x) => x.done).length) }), clearDone)}>{t("clear")}</button>
       </div>
 
       {shown.length === 0 && (
@@ -254,7 +277,7 @@ export default function App() {
             </select>
             <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
             <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
-            <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => setTodos((l) => removeTodo(l, todo.id))}>✕</button>
+            <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => remove((x) => x.id === todo.id, t("undo.deleted"), (l) => removeTodo(l, todo.id))}>✕</button>
           </li>
         ))}
       </ul>

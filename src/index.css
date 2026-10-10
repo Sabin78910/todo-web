@@ -115,3 +115,5 @@ li.task.done .task-text, li.task.done span.checked { opacity: 0.6; text-decorati
 .badge { padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; opacity: 0.5; border: 1px solid currentColor; }
 .badge.earned { opacity: 1; border-color: var(--accent); }
 .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 8px 16px; border-radius: 8px; z-index: 10; }
+.undo-toast { display: flex; gap: 12px; align-items: center; bottom: 64px; }
+.undo-toast button { background: #fff; color: var(--accent); padding: 2px 10px; }
