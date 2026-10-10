@@ -347,3 +347,44 @@ test("undo restores cleared done todos, and the toast auto-dismisses", async () 
   expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   vi.useRealTimers();
 });
+
+const backup = (todos: unknown) => new File([JSON.stringify({ version: 1, todos })], "b.json", { type: "application/json" });
+
+test("export downloads a dated JSON blob without network", async () => {
+  localStorage.setItem("todos", JSON.stringify([{ id: "a", text: "a", done: false }]));
+  const create = vi.fn(() => "blob:x");
+  const revoke = vi.fn();
+  Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Export" }));
+  expect(create).toHaveBeenCalledWith(expect.any(Blob));
+  expect(click).toHaveBeenCalled();
+  expect(revoke).toHaveBeenCalled();
+  click.mockRestore();
+});
+
+test("import replaces todos after confirmation, and keeps them if declined", async () => {
+  localStorage.setItem("todos", JSON.stringify([{ id: "old", text: "old", done: false }]));
+  const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  render(<App />);
+  const input = screen.getByLabelText("Import backup");
+  await userEvent.upload(input, backup([{ id: "n", text: "new", done: false }]));
+  expect(await screen.findByText("old")).toBeInTheDocument();
+  await userEvent.upload(input, backup([{ id: "n", text: "new", done: false }]));
+  expect(await screen.findByText("new")).toBeInTheDocument();
+  expect(screen.queryByText("old")).not.toBeInTheDocument();
+  expect(confirm).toHaveBeenCalledTimes(2);
+  confirm.mockRestore();
+});
+
+test("importing an invalid file shows an accessible error and keeps data", async () => {
+  localStorage.setItem("todos", JSON.stringify([{ id: "old", text: "old", done: false }]));
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+  render(<App />);
+  await userEvent.upload(screen.getByLabelText("Import backup"), new File(["nope"], "b.json", { type: "application/json" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Invalid backup file");
+  expect(screen.getByText("old")).toBeInTheDocument();
+  expect(confirm).not.toHaveBeenCalled();
+  confirm.mockRestore();
+});
