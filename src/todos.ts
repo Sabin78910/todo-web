@@ -3,6 +3,7 @@ export interface Todo {
   text: string;
   done: boolean;
   due?: string; // YYYY-MM-DD
+  time?: string; // HH:MM (24h), only alongside a due date
   priority?: Priority;
   repeat?: Repeat;
   subtasks?: Subtask[];
@@ -16,12 +17,12 @@ export interface Subtask {
 }
 export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
-export type Filter = "all" | "active" | "done" | "today";
+export type Filter = "all" | "active" | "done" | "today" | "upcoming";
 
 export const NOTE_MAX = 1000;
 
-export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat, labels?: string[]): Todo[] =>
-  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(labels?.length ? { labels } : {}) }] : list;
+export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat, labels?: string[], time?: string): Todo[] =>
+  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(due && time ? { time } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(labels?.length ? { labels } : {}) }] : list;
 
 export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
 
@@ -75,8 +76,12 @@ export const restoreTodos = (list: Todo[], removed: Removed[]): Todo[] => {
   return next;
 };
 
+/** Open todos due after today, soonest first (then by time). */
+export const upcoming = (list: Todo[], today: string): Todo[] =>
+  list.filter((t) => !t.done && !!t.due && t.due > today).sort((a, b) => `${a.due} ${a.time ?? "99"}`.localeCompare(`${b.due} ${b.time ?? "99"}`));
+
 export const visible = (list: Todo[], f: Filter, today: string = new Date().toLocaleDateString("en-CA")): Todo[] =>
-  f === "all" ? list : list.filter((t) => (f === "today" ? isDueTodayOrOverdue(t, today) : f === "done" ? t.done : !t.done));
+  f === "all" ? list : f === "upcoming" ? upcoming(list, today) : list.filter((t) => (f === "today" ? isDueTodayOrOverdue(t, today) : f === "done" ? t.done : !t.done));
 
 export const searchTodos = (list: Todo[], query: string): Todo[] => {
   const q = query.trim().toLowerCase();
@@ -149,6 +154,7 @@ export const dueStatus = (t: Todo, today: string): "overdue" | "today" | "later"
 export const serialize = (list: Todo[]): string => JSON.stringify({ version: 1, todos: list }, null, 2);
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const parseSubtasks = (raw: unknown): Subtask[] => {
   if (!Array.isArray(raw)) return bad();
   const ids = new Set<string>();
@@ -178,10 +184,11 @@ export const parse = (json: string): Todo[] => {
   const ids = new Set<string>();
   return list.map((raw: Record<string, unknown> | null) => {
     if (typeof raw !== "object" || raw === null) return bad();
-    const { id, text, done, due, priority, repeat, subtasks, labels, note } = raw;
+    const { id, text, done, due, time, priority, repeat, subtasks, labels, note } = raw;
     if (typeof id !== "string" || !id || ids.has(id)) return bad();
     if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
     if (due !== undefined && (typeof due !== "string" || !DAY.test(due))) return bad();
+    if (time !== undefined && (typeof time !== "string" || !TIME.test(time) || !due)) return bad();
     if (priority !== undefined && priority !== 1 && priority !== 2 && priority !== 3) return bad();
     if (repeat !== undefined && repeat !== "daily" && repeat !== "weekly") return bad();
     const subs = subtasks === undefined ? undefined : parseSubtasks(subtasks);
@@ -189,7 +196,7 @@ export const parse = (json: string): Todo[] => {
     if (note !== undefined && typeof note !== "string") return bad();
     const n = typeof note === "string" ? note.trim().slice(0, NOTE_MAX) : "";
     ids.add(id);
-    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}), ...(labels?.length ? { labels: labels as string[] } : {}), ...(n ? { note: n } : {}) } as Todo;
+    return { id, text, done, ...(due ? { due } : {}), ...(time ? { time } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}), ...(labels?.length ? { labels: labels as string[] } : {}), ...(n ? { note: n } : {}) } as Todo;
   });
 };
 

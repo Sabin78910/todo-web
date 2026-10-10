@@ -1,4 +1,4 @@
-import { addDays, award, streakInfo, DEFAULT_GOAL, goalProgress, levelFor, levelProgress, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
+import { addDays, award, awardFocus, FOCUS_XP, streakInfo, DEFAULT_GOAL, goalProgress, levelFor, levelProgress, loadRewards, pointsFor, saveRewards, setGoal, type Rewards } from "./rewards";
 
 const todo = { id: "1", text: "a", done: true };
 const fresh: Rewards = { points: 0, goal: DEFAULT_GOAL, day: "2026-01-02", doneToday: 0, awarded: [], metDays: [], best: 0 };
@@ -94,4 +94,18 @@ test("levelProgress gives position within the current level", () => {
   expect(levelProgress(0)).toMatchObject({ name: "Beginner", next: 100, ratio: 0 });
   expect(levelProgress(250)).toMatchObject({ name: "Apprentice", next: 300, ratio: 0.75 });
   expect(levelProgress(2500)).toMatchObject({ name: "Grand Master", next: null, ratio: 1 });
+});
+
+test("levelProgress numbers levels from 1", () => {
+  expect(levelProgress(0)).toMatchObject({ name: "Beginner", level: 1, next: 100, ratio: 0 });
+  expect(levelProgress(200)).toMatchObject({ name: "Apprentice", level: 2, ratio: 0.5 });
+  expect(levelProgress(99999)).toMatchObject({ name: "Grand Master", level: 7, next: null, ratio: 1 });
+});
+
+test("awardFocus adds focus XP and counts sessions without touching the daily goal", () => {
+  const r = loadRewards("2026-10-10");
+  const once = awardFocus(r);
+  expect(once.points).toBe(FOCUS_XP);
+  expect(once.focus).toBe(1);
+  expect(awardFocus(once)).toMatchObject({ points: 2 * FOCUS_XP, focus: 2, doneToday: 0 });
 });
