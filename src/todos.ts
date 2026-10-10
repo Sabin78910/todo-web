@@ -6,6 +6,7 @@ export interface Todo {
   priority?: Priority;
   repeat?: Repeat;
   subtasks?: Subtask[];
+  labels?: string[];
 }
 export interface Subtask {
   id: string;
@@ -16,8 +17,8 @@ export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
 export type Filter = "all" | "active" | "done" | "today";
 
-export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat): Todo[] =>
-  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) }] : list;
+export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat, labels?: string[]): Todo[] =>
+  text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(labels?.length ? { labels } : {}) }] : list;
 
 export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
 
@@ -164,15 +165,16 @@ export const parse = (json: string): Todo[] => {
   const ids = new Set<string>();
   return list.map((raw: Record<string, unknown> | null) => {
     if (typeof raw !== "object" || raw === null) return bad();
-    const { id, text, done, due, priority, repeat, subtasks } = raw;
+    const { id, text, done, due, priority, repeat, subtasks, labels } = raw;
     if (typeof id !== "string" || !id || ids.has(id)) return bad();
     if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
     if (due !== undefined && (typeof due !== "string" || !DAY.test(due))) return bad();
     if (priority !== undefined && priority !== 1 && priority !== 2 && priority !== 3) return bad();
     if (repeat !== undefined && repeat !== "daily" && repeat !== "weekly") return bad();
     const subs = subtasks === undefined ? undefined : parseSubtasks(subtasks);
+    if (labels !== undefined && (!Array.isArray(labels) || labels.some((l) => typeof l !== "string" || !l))) return bad();
     ids.add(id);
-    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}) } as Todo;
+    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}), ...(labels?.length ? { labels: labels as string[] } : {}) } as Todo;
   });
 };
 
@@ -188,3 +190,17 @@ export const parseQuickDate = (text: string, today: string): { text: string; due
   else if (word !== "today") d.setUTCDate(d.getUTCDate() + (((WEEKDAYS.indexOf(word) - d.getUTCDay() + 6) % 7) + 1));
   return { text: m[1], due: d.toISOString().slice(0, 10) };
 };
+
+/** Extracts `#label` tokens (lowercased, deduped) from quick-add text and strips them from the title. */
+export const parseLabels = (text: string): { text: string; labels: string[] } => {
+  const labels: string[] = [];
+  const rest = text.replace(/(^|\s)#([^\s#]+)/g, (_, sp: string, l: string) => {
+    const k = l.toLowerCase();
+    if (!labels.includes(k)) labels.push(k);
+    return sp;
+  });
+  return { text: rest.replace(/\s+/g, " ").trim(), labels };
+};
+
+export const filterByLabel = (list: Todo[], label: string | null): Todo[] =>
+  label ? list.filter((t) => t.labels?.includes(label)) : list;
