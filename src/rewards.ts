@@ -8,11 +8,13 @@ export interface Rewards {
   awarded: string[]; // todo ids already rewarded (prevents re-farming)
   metDays: string[]; // YYYY-MM-DD days the goal was reached
   best: number; // best streak ever
+  focus?: number; // completed focus sessions, all time
 }
 
 export const DEFAULT_GOAL = 5;
 const BASE = 10;
 const ON_TIME_BONUS = 5;
+export const FOCUS_XP = 20;
 
 const LEVELS = [
   { name: "Beginner", min: 0 },
@@ -33,12 +35,16 @@ export function levelFor(points: number): { name: string; next: number | null } 
   return { name: LEVELS[i].name, next: LEVELS[i + 1]?.min ?? null };
 }
 
-export function levelProgress(points: number): { name: string; next: number | null; ratio: number } {
+/** Current level (with its 1-based number), the points needed for the next one and progress towards it. */
+export function levelProgress(points: number): { name: string; level: number; next: number | null; ratio: number } {
   const { name, next } = levelFor(points);
-  if (next === null) return { name, next, ratio: 1 };
-  const min = LEVELS.find((l) => l.name === name)!.min;
-  return { name, next, ratio: (points - min) / (next - min) };
+  const i = LEVELS.findIndex((l) => l.name === name);
+  if (next === null) return { name, level: i + 1, next, ratio: 1 };
+  return { name, level: i + 1, next, ratio: (points - LEVELS[i].min) / (next - LEVELS[i].min) };
 }
+
+/** A finished focus session earns FOCUS_XP; sessions are time-gated, so there is nothing to farm. */
+export const awardFocus = (r: Rewards): Rewards => ({ ...r, points: r.points + FOCUS_XP, focus: (r.focus ?? 0) + 1 });
 
 export function award(r: Rewards, t: Todo, today: string): Rewards {
   if (r.awarded.includes(t.id)) return r;

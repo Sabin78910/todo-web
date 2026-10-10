@@ -295,3 +295,34 @@ test("note round-trips through export/import and is optional", () => {
   expect(() => parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, note: 5 }] }))).toThrow();
   expect(parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, note: "x".repeat(NOTE_MAX + 1) }] }))[0].note).toHaveLength(NOTE_MAX);
 });
+
+describe("time and upcoming", () => {
+  const today = "2026-10-10";
+  test("addTodo keeps a time only alongside a due date", () => {
+    expect(addTodo([], "a", "1", "2026-10-11", undefined, undefined, undefined, "17:00")[0].time).toBe("17:00");
+    expect(addTodo([], "a", "1", undefined, undefined, undefined, undefined, "17:00")[0]).not.toHaveProperty("time");
+  });
+  test("upcoming lists open todos due after today, soonest first", () => {
+    const l = [
+      { id: "1", text: "late", done: false, due: "2026-10-09" },
+      { id: "2", text: "now", done: false, due: today },
+      { id: "3", text: "later pm", done: false, due: "2026-10-12", time: "18:00" },
+      { id: "4", text: "later am", done: false, due: "2026-10-12", time: "08:00" },
+      { id: "5", text: "later all day", done: false, due: "2026-10-12" },
+      { id: "6", text: "soon", done: false, due: "2026-10-11" },
+      { id: "7", text: "done", done: true, due: "2026-10-11" },
+      { id: "8", text: "undated", done: false },
+    ];
+    expect(visible(l, "upcoming", today).map((t) => t.id)).toEqual(["6", "4", "3", "5"]);
+  });
+  test("backup round-trips a time and rejects bad or dateless times", () => {
+    const ok = [{ id: "a", text: "a", done: false, due: "2026-10-11", time: "09:30" }];
+    expect(parse(serialize(ok))).toEqual(ok);
+    expect(() => parse(JSON.stringify({ todos: [{ id: "a", text: "a", done: false, due: "2026-10-11", time: "9:30" }] }))).toThrow();
+    expect(() => parse(JSON.stringify({ todos: [{ id: "a", text: "a", done: false, time: "09:30" }] }))).toThrow();
+  });
+  test("recurring todos keep their time on the next occurrence", () => {
+    const l = toggleTodo([{ id: "a", text: "a", done: false, due: "2026-10-10", time: "07:00", repeat: "daily" }], "a", today, "b");
+    expect(l[1]).toMatchObject({ due: "2026-10-11", time: "07:00", done: false });
+  });
+});
