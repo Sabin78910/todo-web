@@ -54,6 +54,11 @@ export const restoreTodos = (list: Todo[], removed: Removed[]): Todo[] => {
 export const visible = (list: Todo[], f: Filter): Todo[] =>
   f === "all" ? list : list.filter((t) => (f === "done" ? t.done : !t.done));
 
+export const searchTodos = (list: Todo[], query: string): Todo[] => {
+  const q = query.trim().toLowerCase();
+  return q ? list.filter((t) => t.text.toLowerCase().includes(q)) : list;
+};
+
 const KEY = "todos";
 export function load(): Todo[] {
   try {
