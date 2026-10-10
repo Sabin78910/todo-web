@@ -1,4 +1,5 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate } from "./todos";
+import type { Todo } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -176,4 +177,21 @@ test("parseQuickDate", () => {
   expect(parseQuickDate("tomorrow is another day", today)).toEqual({ text: "tomorrow is another day" });
   expect(parseQuickDate("tomorrow", today)).toEqual({ text: "tomorrow" });
   expect(parseQuickDate("on friday", today)).toEqual({ text: "on friday" });
+});
+
+describe("today filter", () => {
+  const today = "2026-10-10";
+  const l: Todo[] = [
+    { id: "1", text: "overdue", done: false, due: "2026-10-09" },
+    { id: "2", text: "today", done: false, due: today },
+    { id: "3", text: "future", done: false, due: "2026-10-11" },
+    { id: "4", text: "nodue", done: false },
+    { id: "5", text: "done", done: true, due: today },
+  ];
+  test("isDueTodayOrOverdue", () => {
+    expect(l.map((t) => isDueTodayOrOverdue(t, today))).toEqual([true, true, false, false, false]);
+  });
+  test("visible today keeps open todos due by today", () => {
+    expect(visible(l, "today", today).map((t) => t.id)).toEqual(["1", "2"]);
+  });
 });

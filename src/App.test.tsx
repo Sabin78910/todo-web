@@ -439,3 +439,26 @@ test("manual due date wins over quick-add words", async () => {
   const saved = JSON.parse(localStorage.getItem("todos")!).find((t: { text: string }) => t.text === "pay rent tomorrow");
   expect(saved.due).toBe("2999-01-01");
 });
+
+test("Today filter shows overdue and due-today todos, with empty state and reorder disabled", async () => {
+  const today = new Date().toLocaleDateString("en-CA");
+  localStorage.setItem("todos", JSON.stringify([
+    { id: "1", text: "late", done: false, due: "2000-01-01" },
+    { id: "2", text: "now", done: false, due: today },
+    { id: "3", text: "someday", done: false, due: "2999-01-01" },
+    { id: "4", text: "whenever", done: false },
+  ]));
+  render(<App />);
+  const btn = screen.getByRole("button", { name: "Today" });
+  expect(btn).toHaveAttribute("aria-pressed", "false");
+  await userEvent.click(btn);
+  expect(btn).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByText("late")).toBeInTheDocument();
+  expect(screen.getByText("now")).toBeInTheDocument();
+  expect(screen.queryByText("someday")).not.toBeInTheDocument();
+  expect(screen.queryByText("whenever")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Move late down" })).toBeDisabled();
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
+  expect(screen.getByText("Nothing here")).toBeInTheDocument();
+});

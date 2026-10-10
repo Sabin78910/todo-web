@@ -8,12 +8,14 @@ export interface Todo {
 }
 export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
-export type Filter = "all" | "active" | "done";
+export type Filter = "all" | "active" | "done" | "today";
 
 export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat): Todo[] =>
   text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) }] : list;
 
 export const isOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due < today;
+
+export const isDueTodayOrOverdue = (t: Todo, today: string): boolean => !t.done && !!t.due && t.due <= today;
 
 export const nextDue = (due: string, repeat: Repeat): string => {
   const d = new Date(`${due}T00:00:00Z`);
@@ -51,8 +53,8 @@ export const restoreTodos = (list: Todo[], removed: Removed[]): Todo[] => {
   return next;
 };
 
-export const visible = (list: Todo[], f: Filter): Todo[] =>
-  f === "all" ? list : list.filter((t) => (f === "done" ? t.done : !t.done));
+export const visible = (list: Todo[], f: Filter, today: string = new Date().toLocaleDateString("en-CA")): Todo[] =>
+  f === "all" ? list : list.filter((t) => (f === "today" ? isDueTodayOrOverdue(t, today) : f === "done" ? t.done : !t.done));
 
 export const searchTodos = (list: Todo[], query: string): Todo[] => {
   const q = query.trim().toLowerCase();
