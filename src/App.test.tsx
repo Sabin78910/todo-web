@@ -559,3 +559,47 @@ test("adds, edits, searches and clears a note, rendered as plain text", async ()
   expect(JSON.parse(localStorage.getItem("todos")!)[0]).not.toHaveProperty("note");
   expect(screen.queryByTestId("note-indicator")).not.toBeInTheDocument();
 });
+
+describe("focus timer", () => {
+  const seed = () => localStorage.setItem("todos", JSON.stringify([{ id: "1", text: "Plan trip", done: false }, { id: "2", text: "Other", done: false }]));
+
+  test("is hidden until Focus is pressed, then starts, pauses and resets by keyboard", async () => {
+    seed();
+    render(<App />);
+    expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Focus on Plan trip" }));
+    expect(screen.getByRole("timer")).toHaveTextContent("25:00");
+    expect(screen.getByText("Plan trip", { selector: "strong" })).toBeInTheDocument();
+    const status = screen.getByRole("status", { name: "Focus timer status" });
+    expect(status).toHaveTextContent("");
+    const startBtn = screen.getByRole("button", { name: "Start" });
+    startBtn.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(status).toHaveTextContent("Focus started");
+    await userEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(status).toHaveTextContent("Focus paused");
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByRole("timer")).toHaveTextContent("25:00");
+    await userEvent.click(screen.getByRole("button", { name: "Close timer" }));
+    expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+  });
+
+  test("finishing shows a calm message, offers a break, and completing the task still works", async () => {
+    seed();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<App />);
+      await userEvent.click(screen.getByRole("button", { name: "Focus on Plan trip" }));
+      await userEvent.click(screen.getByRole("button", { name: "Start" }));
+      act(() => { vi.advanceTimersByTime(25 * 60_000 + 1000); });
+      expect(screen.getByRole("status", { name: "Focus timer status" })).toHaveTextContent("Focus session complete");
+      expect(screen.getByRole("timer")).toHaveTextContent("00:00");
+      await userEvent.click(screen.getByRole("button", { name: "Start break" }));
+      expect(screen.getByRole("timer")).toHaveTextContent("05:00");
+      await userEvent.click(screen.getAllByRole("checkbox")[0]);
+      expect(JSON.parse(localStorage.getItem("todos")!)[0].done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

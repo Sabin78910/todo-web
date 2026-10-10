@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadCelebrated, markCelebrated, prefersReducedMotion, shouldCelebrate } from "./celebrate";
 import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
+import { createTimer, pause, remaining, reset, start, tick, type Timer } from "./focus";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
 import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, filterByLabel, parseLabels, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setNote, NOTE_MAX, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
@@ -13,6 +14,11 @@ const systemTheme = (): Theme => (typeof window.matchMedia === "function" && win
 const loadTheme = (): Theme => {
   const saved = localStorage.getItem("theme");
   return saved === "light" || saved === "dark" ? saved : systemTheme();
+};
+
+const fmtClock = (ms: number, n: (v: number) => string): string => {
+  const s = Math.ceil(ms / 1000);
+  return `${n(Math.floor(s / 60)).padStart(2, "0")}:${n(s % 60).padStart(2, "0")}`;
 };
 
 export default function App() {
@@ -76,6 +82,30 @@ export default function App() {
   const [openSubs, setOpenSubs] = useState<string | null>(null);
   const [subText, setSubText] = useState("");
   const [noteEdit, setNoteEdit] = useState<{ id: string; text: string } | null>(null);
+  const [focus, setFocus] = useState<{ id: string; timer: Timer } | null>(null);
+  const [focusMsg, setFocusMsg] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const focusRunning = focus?.timer.status === "running";
+  useEffect(() => {
+    if (!focusRunning) return;
+    const id = setInterval(() => {
+      const at = Date.now();
+      setNow(at);
+      setFocus((f) => {
+        if (!f) return f;
+        const next = tick(f.timer, at);
+        if (next !== f.timer) setFocusMsg(t(f.timer.phase === "focus" ? "focus.done" : "focus.breakDone"));
+        return next === f.timer ? f : { ...f, timer: next };
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [focusRunning]); // eslint-disable-line react-hooks/exhaustive-deps
+  const updateTimer = (fn: (tm: Timer, at: number) => Timer, msg?: Key) => {
+    const at = Date.now();
+    setNow(at);
+    setFocus((f) => (f ? { ...f, timer: fn(f.timer, at) } : f));
+    if (msg) setFocusMsg(t(msg));
+  };
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   const today = new Date().toLocaleDateString("en-CA");
@@ -356,6 +386,7 @@ export default function App() {
             )}
             {todo.note && <span data-testid="note-indicator" className="muted" role="img" aria-label={t("note.has")}>📝</span>}
             <button className="link" aria-expanded={noteEdit?.id === todo.id} aria-label={t("note.open", { text: todo.text })} onClick={() => setNoteEdit(noteEdit?.id === todo.id ? null : { id: todo.id, text: todo.note ?? "" })}>✎</button>
+            <button className="link" aria-expanded={focus?.id === todo.id} aria-label={t("focus.open", { text: todo.text })} onClick={() => { setFocusMsg(""); setFocus(focus?.id === todo.id ? null : { id: todo.id, timer: createTimer("focus") }); }}>⏱</button>
             <button className="link" aria-expanded={openSubs === todo.id} aria-label={t("sub.toggle", { text: todo.text })} onClick={() => { setOpenSubs(openSubs === todo.id ? null : todo.id); setSubText(""); }}>☰</button>
             <select aria-label={t("prio.for", { text: todo.text })} value={todo.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, todo.id, parsePriority(e.target.value)))}>
               <option value="">{t("prio.noneShort")}</option>
@@ -377,6 +408,22 @@ export default function App() {
                   onKeyDown={(e) => { if (e.key === "Escape") setNoteEdit(null); }}
                 />
                 <button type="button" aria-label={t("note.save", { text: todo.text })} onClick={() => { setTodos((l) => setNote(l, todo.id, noteEdit.text)); setNoteEdit(null); }}>{t("note.saveShort")}</button>
+              </div>
+            )}
+            {focus?.id === todo.id && (
+              <div className="row" role="group" aria-label={t("focus.panel")} style={{ width: "100%" }}>
+                <strong>{todo.text}</strong>
+                <span className="muted">{t(focus.timer.phase === "focus" ? "focus.phaseFocus" : "focus.phaseBreak")}</span>
+                <span role="timer" aria-live="off">{fmtClock(remaining(focus.timer, now), n)}</span>
+                {focus.timer.status === "running"
+                  ? <button type="button" onClick={() => updateTimer(pause, "focus.paused")}>{t("focus.pause")}</button>
+                  : focus.timer.status !== "done" && <button type="button" onClick={() => updateTimer(start, focus.timer.phase === "focus" ? "focus.started" : "focus.breakStarted")}>{t("focus.start")}</button>}
+                {focus.timer.status === "done" && focus.timer.phase === "focus" && (
+                  <button type="button" onClick={() => { updateTimer((_, at) => start(createTimer("break"), at), "focus.breakStarted"); }}>{t("focus.startBreak")}</button>
+                )}
+                <button type="button" onClick={() => { updateTimer((tm) => reset(tm)); setFocusMsg(""); }}>{t("focus.reset")}</button>
+                <button type="button" onClick={() => { setFocus(null); setFocusMsg(""); }}>{t("focus.close")}</button>
+                <div role="status" aria-label={t("focus.status")} className="sr-only">{focusMsg}</div>
               </div>
             )}
             {openSubs === todo.id && (
