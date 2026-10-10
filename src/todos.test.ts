@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate, addSubtask, toggleSubtask, removeSubtask, parseLabels, filterByLabel } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate, addSubtask, toggleSubtask, removeSubtask, parseLabels, filterByLabel, setNote, NOTE_MAX } from "./todos";
 import type { Todo } from "./todos";
 
 test("todo lifecycle", () => {
@@ -272,4 +272,26 @@ describe("labels", () => {
     expect(t[1]).not.toHaveProperty("labels");
     expect(() => parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, labels: [1] }] }))).toThrow();
   });
+});
+
+test("setNote trims, caps length, and clears when empty", () => {
+  const l: Todo[] = [{ id: "1", text: "a", done: false }, { id: "2", text: "b", done: false }];
+  const withNote = setNote(l, "1", "  details  ");
+  expect(withNote[0].note).toBe("details");
+  expect(withNote[1]).toBe(l[1]);
+  expect(setNote(l, "1", "x".repeat(NOTE_MAX + 5))[0].note).toHaveLength(NOTE_MAX);
+  expect(setNote(withNote, "1", "   ")[0]).not.toHaveProperty("note");
+});
+
+test("searchTodos matches note text", () => {
+  const l: Todo[] = [{ id: "1", text: "a", done: false, note: "See Link" }, { id: "2", text: "b", done: false }];
+  expect(searchTodos(l, "link").map((t) => t.id)).toEqual(["1"]);
+});
+
+test("note round-trips through export/import and is optional", () => {
+  const l: Todo[] = [{ id: "1", text: "a", done: false, note: "hi" }, { id: "2", text: "b", done: false }];
+  expect(parse(serialize(l))).toEqual(l);
+  expect(parse(serialize(l))[1]).not.toHaveProperty("note");
+  expect(() => parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, note: 5 }] }))).toThrow();
+  expect(parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, note: "x".repeat(NOTE_MAX + 1) }] }))[0].note).toHaveLength(NOTE_MAX);
 });

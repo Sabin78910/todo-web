@@ -7,6 +7,7 @@ export interface Todo {
   repeat?: Repeat;
   subtasks?: Subtask[];
   labels?: string[];
+  note?: string;
 }
 export interface Subtask {
   id: string;
@@ -16,6 +17,8 @@ export interface Subtask {
 export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
 export type Filter = "all" | "active" | "done" | "today";
+
+export const NOTE_MAX = 1000;
 
 export const addTodo = (list: Todo[], text: string, id: string = crypto.randomUUID(), due?: string, priority?: Priority, repeat?: Repeat, labels?: string[]): Todo[] =>
   text.trim() ? [...list, { id, text: text.trim(), done: false, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(labels?.length ? { labels } : {}) }] : list;
@@ -77,7 +80,7 @@ export const visible = (list: Todo[], f: Filter, today: string = new Date().toLo
 
 export const searchTodos = (list: Todo[], query: string): Todo[] => {
   const q = query.trim().toLowerCase();
-  return q ? list.filter((t) => t.text.toLowerCase().includes(q)) : list;
+  return q ? list.filter((t) => t.text.toLowerCase().includes(q) || !!t.note?.toLowerCase().includes(q)) : list;
 };
 
 const KEY = "todos";
@@ -112,6 +115,16 @@ export function save(list: Todo[]): void {
 
 export const editTodo = (list: Todo[], id: string, text: string): Todo[] =>
   text.trim() ? list.map((t) => (t.id === id ? { ...t, text: text.trim() } : t)) : list;
+
+/** Sets a todo's note (trimmed, capped at NOTE_MAX); an empty note removes it. */
+export const setNote = (list: Todo[], id: string, note: string): Todo[] =>
+  list.map((t) => {
+    if (t.id !== id) return t;
+    const n = note.trim().slice(0, NOTE_MAX);
+    const next: Todo = { ...t, note: n };
+    if (!n) delete next.note;
+    return next;
+  });
 
 export const moveTodo = (list: Todo[], id: string, dir: "up" | "down"): Todo[] => {
   const i = list.findIndex((t) => t.id === id);
@@ -165,7 +178,7 @@ export const parse = (json: string): Todo[] => {
   const ids = new Set<string>();
   return list.map((raw: Record<string, unknown> | null) => {
     if (typeof raw !== "object" || raw === null) return bad();
-    const { id, text, done, due, priority, repeat, subtasks, labels } = raw;
+    const { id, text, done, due, priority, repeat, subtasks, labels, note } = raw;
     if (typeof id !== "string" || !id || ids.has(id)) return bad();
     if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
     if (due !== undefined && (typeof due !== "string" || !DAY.test(due))) return bad();
@@ -173,8 +186,10 @@ export const parse = (json: string): Todo[] => {
     if (repeat !== undefined && repeat !== "daily" && repeat !== "weekly") return bad();
     const subs = subtasks === undefined ? undefined : parseSubtasks(subtasks);
     if (labels !== undefined && (!Array.isArray(labels) || labels.some((l) => typeof l !== "string" || !l))) return bad();
+    if (note !== undefined && typeof note !== "string") return bad();
+    const n = typeof note === "string" ? note.trim().slice(0, NOTE_MAX) : "";
     ids.add(id);
-    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}), ...(labels?.length ? { labels: labels as string[] } : {}) } as Todo;
+    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}), ...(labels?.length ? { labels: labels as string[] } : {}), ...(n ? { note: n } : {}) } as Todo;
   });
 };
 
