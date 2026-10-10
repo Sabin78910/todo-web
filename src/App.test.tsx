@@ -388,3 +388,33 @@ test("importing an invalid file shows an accessible error and keeps data", async
   expect(confirm).not.toHaveBeenCalled();
   confirm.mockRestore();
 });
+
+test("search filters with status filter, / focuses, Esc clears, reorder disabled", async () => {
+  localStorage.setItem("todos", JSON.stringify([
+    { id: "1", text: "Buy milk", done: false },
+    { id: "2", text: "Milk the cow", done: true },
+    { id: "3", text: "Walk dog", done: false },
+  ]));
+  render(<App />);
+  const search = screen.getByLabelText("Search todos");
+  await userEvent.keyboard("/");
+  expect(search).toHaveFocus();
+  expect(search).toHaveValue("");
+  await userEvent.keyboard("MILK");
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  expect(screen.getByRole("button", { name: "Move Milk the cow up" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "active" }));
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  await userEvent.clear(search);
+  await userEvent.type(search, "nope");
+  expect(screen.getByText("Nothing here")).toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  expect(search).toHaveValue("");
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  await userEvent.click(screen.getByRole("button", { name: "all" }));
+  await userEvent.keyboard("{Escape}");
+  const add = screen.getByLabelText("New todo");
+  await userEvent.click(add);
+  await userEvent.keyboard("/");
+  expect(add).toHaveValue("/");
+});

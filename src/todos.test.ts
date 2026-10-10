@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -151,4 +151,15 @@ test("parse rejects malformed input", () => {
     wrap([{ ...ok, done: "no" }]), wrap([{ ...ok, due: "tomorrow" }]), wrap([{ ...ok, priority: 4 }]),
     wrap([{ ...ok, repeat: "monthly" }]), wrap([ok, ok]),
   ]) expect(() => parse(bad), bad).toThrow();
+});
+
+test("searchTodos trims, ignores case, and empty query returns all", () => {
+  const l = [
+    { id: "1", text: "Buy Milk", done: false },
+    { id: "2", text: "Walk dog", done: true },
+  ];
+  expect(searchTodos(l, "  milk ").map((t) => t.id)).toEqual(["1"]);
+  expect(searchTodos(l, "WALK").map((t) => t.id)).toEqual(["2"]);
+  expect(searchTodos(l, "   ")).toBe(l);
+  expect(searchTodos(l, "zzz")).toEqual([]);
 });

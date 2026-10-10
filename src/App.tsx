@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -37,6 +37,19 @@ export default function App() {
   const n = (x: number) => formatNumber(lang, x);
   const { canInstall, install } = useInstallPrompt();
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const [showDetails, setShowDetails] = useState(false);
   const [todos, setTodos] = useState(loadOrSeed);
   const [text, setText] = useState("");
@@ -128,7 +141,7 @@ export default function App() {
 
   useEffect(() => save(todos), [todos]);
 
-  const shown = visible(todos, filter);
+  const shown = searchTodos(visible(todos, filter), query);
   const progress = goalProgress(rewards, today);
   const streak = streakInfo(rewards, today);
   const level = levelProgress(rewards.points);
@@ -232,6 +245,16 @@ export default function App() {
         )}
       </form>
 
+      <input
+        ref={searchRef}
+        type="search"
+        aria-label={t("search.label")}
+        placeholder={t("search.label")}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Escape") setQuery(""); }}
+      />
+
       <div className="toolbar">
         <div className="segmented" role="group" aria-label={t("filter.group")}>
         {(["all", "active", "done"] as Filter[]).map((f) => (
@@ -304,8 +327,8 @@ export default function App() {
               <option value="2">{t("prio.short", { n: n(2) })}</option>
               <option value="3">{t("prio.short", { n: n(3) })}</option>
             </select>
-            <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
-            <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
+            <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
+            <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
             <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => remove((x) => x.id === todo.id, t("undo.deleted"), (l) => removeTodo(l, todo.id))}>✕</button>
           </li>
         ))}
