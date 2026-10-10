@@ -39,13 +39,28 @@ export default function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpReturn = useRef<HTMLElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const openHelp = () => {
+    helpReturn.current = document.activeElement as HTMLElement | null;
+    setHelpOpen(true);
+  };
+  const closeHelp = () => {
+    setHelpOpen(false);
+    helpReturn.current?.focus();
+  };
+  useEffect(() => {
+    if (helpOpen) closeBtnRef.current?.focus();
+  }, [helpOpen]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.key !== "/" && e.key !== "?") || e.ctrlKey || e.metaKey || e.altKey) return;
       if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
       e.preventDefault();
-      searchRef.current?.focus();
+      if (e.key === "?") openHelp();
+      else searchRef.current?.focus();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -175,6 +190,7 @@ export default function App() {
             <input type="number" min={1} style={{ width: 70 }} defaultValue={rewards.goal} onChange={(e) => setRewards((r) => setGoal(r, e.target.valueAsNumber))} />
           </label>
           {canInstall && <button type="button" onClick={install}>{t("install")}</button>}
+          <button type="button" className="icon" onClick={openHelp} aria-label={t("help.open")}>?</button>
           <button type="button" className="icon" onClick={toggleTheme} aria-label={t(theme === "dark" ? "theme.toLight" : "theme.toDark")}>{theme === "dark" ? "☀️" : "🌙"}</button>
         </div>
       </header>
@@ -373,6 +389,29 @@ export default function App() {
           </li>
         ))}
       </ul>
+      {helpOpen && (
+        <div
+          className="modal-backdrop"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeHelp();
+            else if (e.key === "Tab") {
+              e.preventDefault();
+              closeBtnRef.current?.focus();
+            }
+          }}
+        >
+          <div className="card modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+            <h2 id="help-title">{t("help.title")}</h2>
+            <dl>
+              <dt><kbd>/</kbd></dt>
+              <dd>{t("help.search")}</dd>
+              <dt><kbd>?</kbd></dt>
+              <dd>{t("help.help")}</dd>
+            </dl>
+            <button ref={closeBtnRef} type="button" onClick={closeHelp}>{t("help.close")}</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

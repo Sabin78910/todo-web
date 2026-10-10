@@ -498,3 +498,42 @@ test("#labels in quick add become chips that filter the list, with a clear contr
   expect(screen.getByText("Call boss")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Clear label filter" })).not.toBeInTheDocument();
 });
+
+test("? opens the shortcut help dialog, Escape closes it and returns focus", async () => {
+  render(<App />);
+  const search = screen.getByLabelText("Search todos");
+  const btn = screen.getByRole("button", { name: "Keyboard shortcuts" });
+  btn.focus();
+  await userEvent.keyboard("?");
+  const dialog = screen.getByRole("dialog", { name: "Keyboard shortcuts" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  expect(dialog).toHaveTextContent("/");
+  expect(dialog).toContainElement(document.activeElement as HTMLElement);
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(btn).toHaveFocus();
+  expect(search).not.toHaveFocus();
+});
+
+test("help button opens the dialog and Close button dismisses it", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+test("? and / shortcuts are ignored while typing in an input", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "why?");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("New todo")).toHaveValue("why?");
+});
+
+test("help dialog strings exist in Nepali", async () => {
+  localStorage.setItem("lang", "ne");
+  render(<App />);
+  await userEvent.keyboard("?");
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.queryByText("Keyboard shortcuts")).not.toBeInTheDocument();
+});

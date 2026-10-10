@@ -118,3 +118,7 @@ li.task.done .task-text, li.task.done span.checked { opacity: 0.6; text-decorati
 .undo-toast { display: flex; gap: 12px; align-items: center; bottom: 64px; }
 .undo-toast button { background: #fff; color: var(--accent); padding: 2px 10px; }
 .label-chip { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--pill); background: var(--input-bg); color: var(--accent); border: 1px solid var(--border); cursor: pointer; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.modal { max-width: 360px; width: 90%; }
+.modal dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; }
+.modal dd { margin: 0; }
