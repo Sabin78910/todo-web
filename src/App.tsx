@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
+import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, filterByLabel, parseLabels, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -57,6 +57,7 @@ export default function App() {
   const [priority, setPrio] = useState("");
   const [repeat, setRepeat] = useState<Repeat | "">("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [openSubs, setOpenSubs] = useState<string | null>(null);
   const [subText, setSubText] = useState("");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
@@ -143,7 +144,7 @@ export default function App() {
 
   useEffect(() => save(todos), [todos]);
 
-  const shown = searchTodos(visible(todos, filter, today), query);
+  const shown = searchTodos(filterByLabel(visible(todos, filter, today), labelFilter), query);
   const progress = goalProgress(rewards, today);
   const streak = streakInfo(rewards, today);
   const level = levelProgress(rewards.points);
@@ -218,8 +219,9 @@ export default function App() {
         className="card add-bar"
         onSubmit={(e) => {
           e.preventDefault();
-          const quick = due ? { text } : parseQuickDate(text.trim(), today);
-          setTodos((l) => addTodo(l, quick.text, undefined, due || quick.due, parsePriority(priority), repeat || undefined));
+          const lab = parseLabels(text);
+          const quick = due ? { text: lab.text } : parseQuickDate(lab.text, today);
+          setTodos((l) => addTodo(l, quick.text, undefined, due || quick.due, parsePriority(priority), repeat || undefined, lab.labels));
           setText("");
           setRepeat("");
           setDue("");
@@ -264,6 +266,9 @@ export default function App() {
           <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}>{t(`filter.${f}`)}</button>
         ))}
         </div>
+        {labelFilter && (
+          <button type="button" className="label-chip" onClick={() => setLabelFilter(null)} aria-label={t("label.clear")}>#{labelFilter} ✕</button>
+        )}
         <span className="muted">{t("left", { n: n(left) })}</span>
         <button onClick={() => setTodos(sortByPriority)}>{t("sort")}</button>
         <button className="link" onClick={() => remove((x) => x.done, t("undo.cleared", { n: n(todos.filter((x) => x.done).length) }), clearDone)}>{t("clear")}</button>
@@ -324,6 +329,9 @@ export default function App() {
                 {todo.due && <span className={`due-chip due-${dueStatus(todo, today)}`}>{t("due", { date: formatDay(lang, todo.due) })}</span>}
               </label>
             )}
+            {todo.labels?.map((l) => (
+              <button key={l} type="button" className="label-chip" aria-pressed={labelFilter === l} aria-label={t("label.filter", { label: l })} onClick={() => setLabelFilter(l)}>#{l}</button>
+            ))}
             {!!todo.subtasks?.length && (
               <span className="muted" aria-label={t("sub.progressLabel", { done: todo.subtasks.filter((s) => s.done).length, total: todo.subtasks.length })}>
                 {t("sub.progress", { done: n(todo.subtasks.filter((s) => s.done).length), total: n(todo.subtasks.length) })}

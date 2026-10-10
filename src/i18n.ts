@@ -76,6 +76,8 @@ const en = {
   "sub.delete": "Delete subtask {text}",
   "sub.progress": "{done}/{total}",
   "sub.progressLabel": "{done} of {total} subtasks done",
+  "label.filter": "Filter by label {label}",
+  "label.clear": "Clear label filter",
 } as const;
 
 export type Key = keyof typeof en;
@@ -156,6 +158,8 @@ const ne: Record<Key, string> = {
   "sub.delete": "उपकार्य {text} मेटाउनुहोस्",
   "sub.progress": "{done}/{total}",
   "sub.progressLabel": "{total} मध्ये {done} उपकार्य सकियो",
+  "label.filter": "लेबल {label} अनुसार फिल्टर गर्नुहोस्",
+  "label.clear": "लेबल फिल्टर हटाउनुहोस्",
 };
 
 export const DICTIONARY: Record<Lang, Record<Key, string>> = { en, ne };

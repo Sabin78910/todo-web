@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate, addSubtask, toggleSubtask, removeSubtask } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate, addSubtask, toggleSubtask, removeSubtask, parseLabels, filterByLabel } from "./todos";
 import type { Todo } from "./todos";
 
 test("todo lifecycle", () => {
@@ -247,5 +247,29 @@ describe("subtasks", () => {
     expect(() => parse(mk([{ id: "", text: "t", done: false }]))).toThrow();
     expect(() => parse(mk([{ id: "s", text: "t", done: false }, { id: "s", text: "u", done: false }]))).toThrow();
     expect(() => parse(mk([null]))).toThrow();
+  });
+});
+
+describe("labels", () => {
+  test("parseLabels extracts, lowercases, dedupes and strips #tags", () => {
+    expect(parseLabels("Buy milk #Home #errand #home")).toEqual({ text: "Buy milk", labels: ["home", "errand"] });
+    expect(parseLabels("Fix #bug now")).toEqual({ text: "Fix now", labels: ["bug"] });
+    expect(parseLabels("plain")).toEqual({ text: "plain", labels: [] });
+    expect(parseLabels("C# is fun")).toEqual({ text: "C# is fun", labels: [] });
+  });
+  test("addTodo stores labels only when given", () => {
+    expect(addTodo([], "a", "1", undefined, undefined, undefined, ["x"])[0].labels).toEqual(["x"]);
+    expect(addTodo([], "a", "1")[0]).not.toHaveProperty("labels");
+  });
+  test("filterByLabel filters, and passes through when no label", () => {
+    const l: Todo[] = [{ id: "1", text: "a", done: false, labels: ["x"] }, { id: "2", text: "b", done: false }];
+    expect(filterByLabel(l, "x").map((t) => t.id)).toEqual(["1"]);
+    expect(filterByLabel(l, null)).toBe(l);
+  });
+  test("parse keeps labels; old backups without labels still load; bad labels rejected", () => {
+    const t = parse(serialize([{ id: "1", text: "a", done: false, labels: ["x"] }, { id: "2", text: "b", done: false }]));
+    expect(t[0].labels).toEqual(["x"]);
+    expect(t[1]).not.toHaveProperty("labels");
+    expect(() => parse(JSON.stringify({ todos: [{ id: "1", text: "a", done: false, labels: [1] }] }))).toThrow();
   });
 });

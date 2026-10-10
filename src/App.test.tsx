@@ -484,3 +484,17 @@ test("subtask progress is translated to Nepali", async () => {
   await userEvent.click(screen.getByRole("button", { name: "नेपाली" }));
   expect(screen.getByText("१/१")).toBeInTheDocument();
 });
+
+test("#labels in quick add become chips that filter the list, with a clear control", async () => {
+  render(<App />);
+  const input = screen.getByLabelText("New todo");
+  await userEvent.type(input, "Buy milk #Home{enter}");
+  await userEvent.type(input, "Call boss #work{enter}");
+  expect(screen.getByText("Buy milk")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Filter by label home" }));
+  expect(screen.getByText("Buy milk")).toBeInTheDocument();
+  expect(screen.queryByText("Call boss")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Clear label filter" }));
+  expect(screen.getByText("Call boss")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Clear label filter" })).not.toBeInTheDocument();
+});
