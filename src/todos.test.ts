@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -114,5 +114,21 @@ describe("loadOrSeed", () => {
   test("does not seed when todos already exist", () => {
     save(addTodo([], "mine", "1"));
     expect(loadOrSeed().map((t) => t.text)).toEqual(["mine"]);
+  });
+});
+
+describe("undo helpers", () => {
+  const base = ["a", "b", "c", "d"].map((x, i) => ({ id: x, text: x, done: i % 2 === 1 }));
+  test("removedWithIndex records original indexes", () => {
+    expect(removedWithIndex(base, (t) => t.done).map((r) => [r.todo.id, r.index])).toEqual([["b", 1], ["d", 3]]);
+  });
+  test("restoreTodos puts removed todos back at original positions", () => {
+    const removed = removedWithIndex(base, (t) => t.done);
+    expect(restoreTodos(clearDone(base), removed)).toEqual(base);
+    expect(restoreTodos(removeTodo(base, "a"), removedWithIndex(base, (t) => t.id === "a"))).toEqual(base);
+  });
+  test("restoreTodos clamps indexes and skips duplicates", () => {
+    const removed = [{ todo: base[3], index: 9 }, { todo: base[0], index: 0 }];
+    expect(restoreTodos([base[0]], removed).map((t) => t.id)).toEqual(["a", "d"]);
   });
 });

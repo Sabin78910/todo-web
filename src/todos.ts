@@ -33,6 +33,24 @@ export const removeTodo = (list: Todo[], id: string): Todo[] => list.filter((t) 
 
 export const clearDone = (list: Todo[]): Todo[] => list.filter((t) => !t.done);
 
+export interface Removed {
+  todo: Todo;
+  index: number;
+}
+
+/** Todos matching `pred` with their current indexes, for undoing a removal. */
+export const removedWithIndex = (list: Todo[], pred: (t: Todo) => boolean): Removed[] =>
+  list.flatMap((todo, index) => (pred(todo) ? [{ todo, index }] : []));
+
+/** Re-inserts removed todos at their original indexes (ascending order keeps positions exact). */
+export const restoreTodos = (list: Todo[], removed: Removed[]): Todo[] => {
+  const next = [...list];
+  [...removed].sort((a, b) => a.index - b.index).forEach(({ todo, index }) => {
+    if (!next.some((t) => t.id === todo.id)) next.splice(Math.min(index, next.length), 0, todo);
+  });
+  return next;
+};
+
 export const visible = (list: Todo[], f: Filter): Todo[] =>
   f === "all" ? list : list.filter((t) => (f === "done" ? t.done : !t.done));
 
