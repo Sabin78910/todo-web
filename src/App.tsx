@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, filterByLabel, parseLabels, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
+import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, filterByLabel, parseLabels, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setNote, NOTE_MAX, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -75,6 +75,7 @@ export default function App() {
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [openSubs, setOpenSubs] = useState<string | null>(null);
   const [subText, setSubText] = useState("");
+  const [noteEdit, setNoteEdit] = useState<{ id: string; text: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   const today = new Date().toLocaleDateString("en-CA");
@@ -353,6 +354,8 @@ export default function App() {
                 {t("sub.progress", { done: n(todo.subtasks.filter((s) => s.done).length), total: n(todo.subtasks.length) })}
               </span>
             )}
+            {todo.note && <span data-testid="note-indicator" className="muted" role="img" aria-label={t("note.has")}>📝</span>}
+            <button className="link" aria-expanded={noteEdit?.id === todo.id} aria-label={t("note.open", { text: todo.text })} onClick={() => setNoteEdit(noteEdit?.id === todo.id ? null : { id: todo.id, text: todo.note ?? "" })}>✎</button>
             <button className="link" aria-expanded={openSubs === todo.id} aria-label={t("sub.toggle", { text: todo.text })} onClick={() => { setOpenSubs(openSubs === todo.id ? null : todo.id); setSubText(""); }}>☰</button>
             <select aria-label={t("prio.for", { text: todo.text })} value={todo.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, todo.id, parsePriority(e.target.value)))}>
               <option value="">{t("prio.noneShort")}</option>
@@ -363,6 +366,19 @@ export default function App() {
             <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
             <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
             <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => remove((x) => x.id === todo.id, t("undo.deleted"), (l) => removeTodo(l, todo.id))}>✕</button>
+            {todo.note && noteEdit?.id !== todo.id && <p className="muted" style={{ width: "100%", margin: 0, whiteSpace: "pre-wrap" }}>{todo.note}</p>}
+            {noteEdit?.id === todo.id && (
+              <div style={{ width: "100%" }}>
+                <textarea
+                  aria-label={t("note.edit", { text: todo.text })}
+                  maxLength={NOTE_MAX}
+                  value={noteEdit.text}
+                  onChange={(e) => setNoteEdit({ id: todo.id, text: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Escape") setNoteEdit(null); }}
+                />
+                <button type="button" aria-label={t("note.save", { text: todo.text })} onClick={() => { setTodos((l) => setNote(l, todo.id, noteEdit.text)); setNoteEdit(null); }}>{t("note.saveShort")}</button>
+              </div>
+            )}
             {openSubs === todo.id && (
               <ul className="subtasks" style={{ width: "100%" }}>
                 {(todo.subtasks ?? []).map((s) => (

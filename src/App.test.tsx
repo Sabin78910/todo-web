@@ -537,3 +537,25 @@ test("help dialog strings exist in Nepali", async () => {
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(screen.queryByText("Keyboard shortcuts")).not.toBeInTheDocument();
 });
+
+test("adds, edits, searches and clears a note, rendered as plain text", async () => {
+  localStorage.setItem("todos", JSON.stringify([{ id: "1", text: "Plan trip", done: false }, { id: "2", text: "Other", done: false }]));
+  render(<App />);
+  expect(screen.queryByTestId("note-indicator")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Edit note for Plan trip" }));
+  await userEvent.type(screen.getByLabelText("Note for Plan trip"), "<b>book</b> hotel");
+  await userEvent.click(screen.getByRole("button", { name: "Save note for Plan trip" }));
+  expect(JSON.parse(localStorage.getItem("todos")!)[0].note).toBe("<b>book</b> hotel");
+  expect(screen.getByTestId("note-indicator")).toBeInTheDocument();
+  expect(screen.getByText("<b>book</b> hotel")).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Search todos"), "hotel");
+  expect(screen.queryByText("Other")).not.toBeInTheDocument();
+  expect(screen.getByText("Plan trip")).toBeInTheDocument();
+  await userEvent.clear(screen.getByLabelText("Search todos"));
+  await userEvent.click(screen.getByRole("button", { name: "Edit note for Plan trip" }));
+  expect(screen.getByLabelText("Note for Plan trip")).toHaveValue("<b>book</b> hotel");
+  await userEvent.clear(screen.getByLabelText("Note for Plan trip"));
+  await userEvent.click(screen.getByRole("button", { name: "Save note for Plan trip" }));
+  expect(JSON.parse(localStorage.getItem("todos")!)[0]).not.toHaveProperty("note");
+  expect(screen.queryByTestId("note-indicator")).not.toBeInTheDocument();
+});
