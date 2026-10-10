@@ -418,3 +418,24 @@ test("search filters with status filter, / focuses, Esc clears, reorder disabled
   await userEvent.keyboard("/");
   expect(add).toHaveValue("/");
 });
+
+test("quick add parses a trailing natural-language due date", async () => {
+  render(<App />);
+  await userEvent.type(screen.getByLabelText("New todo"), "pay rent tomorrow");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  expect(screen.getByText("pay rent")).toBeInTheDocument();
+  const saved = JSON.parse(localStorage.getItem("todos")!).find((t: { text: string }) => t.text === "pay rent");
+  expect(saved.due).toBe(d.toLocaleDateString("en-CA"));
+});
+
+test("manual due date wins over quick-add words", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Details" }));
+  await userEvent.type(screen.getByLabelText("New todo"), "pay rent tomorrow");
+  await userEvent.type(screen.getByLabelText("Due date"), "2999-01-01");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  const saved = JSON.parse(localStorage.getItem("todos")!).find((t: { text: string }) => t.text === "pay rent tomorrow");
+  expect(saved.due).toBe("2999-01-01");
+});

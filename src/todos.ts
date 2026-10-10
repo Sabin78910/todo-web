@@ -142,3 +142,16 @@ export const parse = (json: string): Todo[] => {
     return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) } as Todo;
   });
 };
+
+const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+/** Strips a trailing `today`/`tomorrow`/weekday (optionally after `on`) and returns it as a due date; weekdays mean the next occurrence. */
+export const parseQuickDate = (text: string, today: string): { text: string; due?: string } => {
+  const m = /^(.*?\S)(?:\s+on)?\s+(today|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s*$/i.exec(text);
+  if (!m || m[1].toLowerCase() === "on") return { text };
+  const word = m[2].toLowerCase();
+  const d = new Date(`${today}T00:00:00Z`);
+  if (word === "tomorrow") d.setUTCDate(d.getUTCDate() + 1);
+  else if (word !== "today") d.setUTCDate(d.getUTCDate() + (((WEEKDAYS.indexOf(word) - d.getUTCDay() + 6) % 7) + 1));
+  return { text: m[1], due: d.toISOString().slice(0, 10) };
+};

@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -216,7 +216,8 @@ export default function App() {
         className="card add-bar"
         onSubmit={(e) => {
           e.preventDefault();
-          setTodos((l) => addTodo(l, text, undefined, due, parsePriority(priority), repeat || undefined));
+          const quick = due ? { text } : parseQuickDate(text.trim(), today);
+          setTodos((l) => addTodo(l, quick.text, undefined, due || quick.due, parsePriority(priority), repeat || undefined));
           setText("");
           setRepeat("");
           setDue("");

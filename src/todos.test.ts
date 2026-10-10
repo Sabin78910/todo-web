@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -162,4 +162,18 @@ test("searchTodos trims, ignores case, and empty query returns all", () => {
   expect(searchTodos(l, "WALK").map((t) => t.id)).toEqual(["2"]);
   expect(searchTodos(l, "   ")).toBe(l);
   expect(searchTodos(l, "zzz")).toEqual([]);
+});
+
+test("parseQuickDate", () => {
+  const today = "2026-10-10"; // Saturday
+  expect(parseQuickDate("buy milk today", today)).toEqual({ text: "buy milk", due: "2026-10-10" });
+  expect(parseQuickDate("buy milk Tomorrow", today)).toEqual({ text: "buy milk", due: "2026-10-11" });
+  expect(parseQuickDate("call Sam on friday", today)).toEqual({ text: "call Sam", due: "2026-10-16" });
+  expect(parseQuickDate("call Sam MONDAY", today)).toEqual({ text: "call Sam", due: "2026-10-12" });
+  expect(parseQuickDate("gym saturday", today)).toEqual({ text: "gym", due: "2026-10-17" });
+  expect(parseQuickDate("rest sunday", today)).toEqual({ text: "rest", due: "2026-10-11" });
+  expect(parseQuickDate("buy milk", today)).toEqual({ text: "buy milk" });
+  expect(parseQuickDate("tomorrow is another day", today)).toEqual({ text: "tomorrow is another day" });
+  expect(parseQuickDate("tomorrow", today)).toEqual({ text: "tomorrow" });
+  expect(parseQuickDate("on friday", today)).toEqual({ text: "on friday" });
 });
