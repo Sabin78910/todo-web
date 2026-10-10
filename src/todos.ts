@@ -105,3 +105,35 @@ export const sortByPriority = (list: Todo[]): Todo[] =>
 
 export const dueStatus = (t: Todo, today: string): "overdue" | "today" | "later" | undefined =>
   !t.due ? undefined : isOverdue(t, today) ? "overdue" : !t.done && t.due === today ? "today" : "later";
+
+/** Serializes todos to a JSON backup string. */
+export const serialize = (list: Todo[]): string => JSON.stringify({ version: 1, todos: list }, null, 2);
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const bad = (): never => {
+  throw new Error("invalid backup");
+};
+
+/** Strictly parses a JSON backup; throws on malformed input and drops unknown fields. */
+export const parse = (json: string): Todo[] => {
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return bad();
+  }
+  const list = (data as { todos?: unknown } | null)?.todos;
+  if (!Array.isArray(list)) return bad();
+  const ids = new Set<string>();
+  return list.map((raw: Record<string, unknown> | null) => {
+    if (typeof raw !== "object" || raw === null) return bad();
+    const { id, text, done, due, priority, repeat } = raw;
+    if (typeof id !== "string" || !id || ids.has(id)) return bad();
+    if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
+    if (due !== undefined && (typeof due !== "string" || !DAY.test(due))) return bad();
+    if (priority !== undefined && priority !== 1 && priority !== 2 && priority !== 3) return bad();
+    if (repeat !== undefined && repeat !== "daily" && repeat !== "weekly") return bad();
+    ids.add(id);
+    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) } as Todo;
+  });
+};

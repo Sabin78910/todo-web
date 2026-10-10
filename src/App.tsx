@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, removeTodo, removedWithIndex, restoreTodos, save, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -81,6 +81,26 @@ export default function App() {
   const doUndo = () => {
     if (undo) setTodos((l) => restoreTodos(l, undo.removed));
     setUndo(null);
+  };
+
+  const [importError, setImportError] = useState(false);
+  const exportTodos = () => {
+    const url = URL.createObjectURL(new Blob([serialize(todos)], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `todos-${today}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const importTodos = async (file?: File) => {
+    if (!file) return;
+    try {
+      const next = parse(await file.text());
+      setImportError(false);
+      if (window.confirm(t("import.confirm"))) setTodos(next);
+    } catch {
+      setImportError(true);
+    }
   };
 
   const toggle = (id: string) => {
@@ -222,6 +242,15 @@ export default function App() {
         <button onClick={() => setTodos(sortByPriority)}>{t("sort")}</button>
         <button className="link" onClick={() => remove((x) => x.done, t("undo.cleared", { n: n(todos.filter((x) => x.done).length) }), clearDone)}>{t("clear")}</button>
       </div>
+
+      <div className="row">
+        <button type="button" className="link" onClick={exportTodos}>{t("export")}</button>
+        <label style={{ margin: 0 }}>
+          {t("import.label")}
+          <input type="file" accept="application/json,.json" onChange={(e) => { void importTodos(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+      </div>
+      {importError && <p role="alert" className="error">{t("import.error")}</p>}
 
       {shown.length === 0 && (
         <div className="empty">

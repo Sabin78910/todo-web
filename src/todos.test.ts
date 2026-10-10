@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
 
 test("todo lifecycle", () => {
   let l = addTodo([], "  milk ", "1");
@@ -131,4 +131,24 @@ describe("undo helpers", () => {
     const removed = [{ todo: base[3], index: 9 }, { todo: base[0], index: 0 }];
     expect(restoreTodos([base[0]], removed).map((t) => t.id)).toEqual(["a", "d"]);
   });
+});
+
+test("serialize/parse round trip keeps todos and drops unknown fields", () => {
+  const list = [
+    { id: "1", text: "a", done: true, due: "2026-01-02", priority: 2 as const, repeat: "weekly" as const },
+    { id: "2", text: "b", done: false },
+  ];
+  expect(parse(serialize(list))).toEqual(list);
+  const withExtra = JSON.stringify({ version: 1, extra: 1, todos: [{ ...list[1], evil: "x" }] });
+  expect(parse(withExtra)).toEqual([list[1]]);
+});
+
+test("parse rejects malformed input", () => {
+  const ok = { id: "1", text: "a", done: false };
+  const wrap = (todos: unknown) => JSON.stringify({ version: 1, todos });
+  for (const bad of [
+    "not json", "null", "[]", "{}", wrap({}), wrap([null]), wrap([{ ...ok, id: "" }]), wrap([{ ...ok, text: " " }]),
+    wrap([{ ...ok, done: "no" }]), wrap([{ ...ok, due: "tomorrow" }]), wrap([{ ...ok, priority: 4 }]),
+    wrap([{ ...ok, repeat: "monthly" }]), wrap([ok, ok]),
+  ]) expect(() => parse(bad), bad).toThrow();
 });

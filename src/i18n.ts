@@ -65,6 +65,10 @@ const en = {
   "undo.deleted": "Todo deleted",
   "undo.cleared": "Cleared {n} done",
   "undo": "Undo",
+  "export": "Export",
+  "import.label": "Import backup",
+  "import.confirm": "Replace your current todos with this backup?",
+  "import.error": "Invalid backup file",
 } as const;
 
 export type Key = keyof typeof en;
@@ -134,6 +138,10 @@ const ne: Record<Key, string> = {
   "undo.deleted": "काम मेटाइयो",
   "undo.cleared": "{n} सकिएका हटाइयो",
   "undo": "पूर्ववत् गर्नुहोस्",
+  "export": "निर्यात",
+  "import.label": "ब्याकअप आयात",
+  "import.confirm": "हालका कामहरू यो ब्याकअपले बदल्ने?",
+  "import.error": "अमान्य ब्याकअप फाइल",
 };
 
 export const DICTIONARY: Record<Lang, Record<Key, string>> = { en, ne };
