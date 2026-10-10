@@ -4,7 +4,7 @@ import { BADGES, loadBadges, newlyUnlocked, saveBadges } from "./badges";
 import { award, goalProgress, levelProgress, loadRewards, saveRewards, setGoal, streakInfo } from "./rewards";
 import { useInstallPrompt } from "./install";
 import { formatDate, formatDay, formatNumber, type Key, type Lang, loadLang, saveLang, t as tr } from "./i18n";
-import { addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleTodo, visible } from "./todos";
+import { addSubtask, addTodo, clearDone, dueStatus, editTodo, type Filter, isOverdue, loadOrSeed, moveTodo, parseQuickDate, type Priority, type Removed, type Repeat, type Todo, parse, removeSubtask, removeTodo, removedWithIndex, restoreTodos, save, searchTodos, serialize, setPriority, sortByPriority, toggleSubtask, toggleTodo, visible } from "./todos";
 
 const parsePriority = (v: string): Priority | undefined => (v ? (Number(v) as Priority) : undefined);
 
@@ -57,6 +57,8 @@ export default function App() {
   const [priority, setPrio] = useState("");
   const [repeat, setRepeat] = useState<Repeat | "">("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [openSubs, setOpenSubs] = useState<string | null>(null);
+  const [subText, setSubText] = useState("");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   const today = new Date().toLocaleDateString("en-CA");
@@ -322,6 +324,12 @@ export default function App() {
                 {todo.due && <span className={`due-chip due-${dueStatus(todo, today)}`}>{t("due", { date: formatDay(lang, todo.due) })}</span>}
               </label>
             )}
+            {!!todo.subtasks?.length && (
+              <span className="muted" aria-label={t("sub.progressLabel", { done: todo.subtasks.filter((s) => s.done).length, total: todo.subtasks.length })}>
+                {t("sub.progress", { done: n(todo.subtasks.filter((s) => s.done).length), total: n(todo.subtasks.length) })}
+              </span>
+            )}
+            <button className="link" aria-expanded={openSubs === todo.id} aria-label={t("sub.toggle", { text: todo.text })} onClick={() => { setOpenSubs(openSubs === todo.id ? null : todo.id); setSubText(""); }}>☰</button>
             <select aria-label={t("prio.for", { text: todo.text })} value={todo.priority ?? ""} style={{ width: "auto" }} onChange={(e) => setTodos((l) => setPriority(l, todo.id, parsePriority(e.target.value)))}>
               <option value="">{t("prio.noneShort")}</option>
               <option value="1">{t("prio.short", { n: n(1) })}</option>
@@ -331,6 +339,29 @@ export default function App() {
             <button className="link" aria-label={t("move.up", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === 0} onClick={() => setTodos((l) => moveTodo(l, todo.id, "up"))}>↑</button>
             <button className="link" aria-label={t("move.down", { text: todo.text })} disabled={filter !== "all" || query.trim() !== "" || i === shown.length - 1} onClick={() => setTodos((l) => moveTodo(l, todo.id, "down"))}>↓</button>
             <button className="link" aria-label={t("delete", { text: todo.text })} onClick={() => remove((x) => x.id === todo.id, t("undo.deleted"), (l) => removeTodo(l, todo.id))}>✕</button>
+            {openSubs === todo.id && (
+              <ul className="subtasks" style={{ width: "100%" }}>
+                {(todo.subtasks ?? []).map((s) => (
+                  <li key={s.id} className="row">
+                    <input type="checkbox" aria-label={s.text} checked={s.done} onChange={() => setTodos((l) => toggleSubtask(l, todo.id, s.id))} />
+                    <span className={s.done ? "checked" : undefined}>{s.text}</span>
+                    <button className="link" aria-label={t("sub.delete", { text: s.text })} onClick={() => setTodos((l) => removeSubtask(l, todo.id, s.id))}>✕</button>
+                  </li>
+                ))}
+                <li>
+                  <input
+                    aria-label={t("sub.add", { text: todo.text })}
+                    value={subText}
+                    onChange={(e) => setSubText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      setTodos((l) => addSubtask(l, todo.id, subText));
+                      setSubText("");
+                    }}
+                  />
+                </li>
+              </ul>
+            )}
           </li>
         ))}
       </ul>

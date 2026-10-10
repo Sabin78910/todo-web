@@ -1,4 +1,4 @@
-import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate } from "./todos";
+import { addTodo, loadOrSeed, save, clearDone, editTodo, dueStatus, isDueTodayOrOverdue, isOverdue, moveTodo, nextDue, parse, serialize, removeTodo, removedWithIndex, restoreTodos, setPriority, sortByPriority, toggleTodo, visible, searchTodos, parseQuickDate, addSubtask, toggleSubtask, removeSubtask } from "./todos";
 import type { Todo } from "./todos";
 
 test("todo lifecycle", () => {
@@ -193,5 +193,59 @@ describe("today filter", () => {
   });
   test("visible today keeps open todos due by today", () => {
     expect(visible(l, "today", today).map((t) => t.id)).toEqual(["1", "2"]);
+  });
+});
+
+describe("subtasks", () => {
+  const base: Todo[] = [
+    { id: "1", text: "a", done: false },
+    { id: "2", text: "b", done: false },
+  ];
+
+  test("addSubtask appends trimmed text, ignores blank, leaves others unchanged", () => {
+    const l = addSubtask(base, "1", " step ", "s1");
+    expect(l[0]).toEqual({ id: "1", text: "a", done: false, subtasks: [{ id: "s1", text: "step", done: false }] });
+    expect(l[1]).toBe(base[1]);
+    expect(addSubtask(base, "1", "   ", "s2")).toBe(base);
+  });
+
+  test("toggleSubtask flips only the targeted subtask", () => {
+    let l = addSubtask(addSubtask(base, "1", "x", "s1"), "1", "y", "s2");
+    l = toggleSubtask(l, "1", "s2");
+    expect(l[0].subtasks!.map((s) => s.done)).toEqual([false, true]);
+    expect(l[0]).toMatchObject({ text: "a", done: false });
+  });
+
+  test("removeSubtask removes only the targeted subtask", () => {
+    let l = addSubtask(addSubtask(base, "1", "x", "s1"), "1", "y", "s2");
+    l = removeSubtask(l, "1", "s1");
+    expect(l[0].subtasks).toEqual([{ id: "s2", text: "y", done: false }]);
+    expect(l[1]).toBe(base[1]);
+  });
+
+  test("completing the parent does not need subtasks; recurring copy resets them", () => {
+    const l = addSubtask([{ id: "1", text: "a", done: false, repeat: "daily" as const, due: "2026-01-01" }], "1", "x", "s1");
+    const done = toggleSubtask(l, "1", "s1");
+    const next = toggleTodo(done, "1", "2026-01-01", "new");
+    expect(next[0].done).toBe(true);
+    expect(next[0].subtasks![0].done).toBe(true);
+    expect(next[1].subtasks).toEqual([{ id: "s1", text: "x", done: false }]);
+    expect(toggleTodo(l, "1")[0].done).toBe(true);
+  });
+
+  test("export/import keeps subtasks; old backups without them still load", () => {
+    const l = addSubtask(base, "1", "x", "s1");
+    expect(parse(serialize(l))).toEqual(l);
+    expect(parse(serialize(base))[0]).not.toHaveProperty("subtasks");
+  });
+
+  test("parse rejects malformed subtasks", () => {
+    const mk = (subtasks: unknown) => JSON.stringify({ version: 1, todos: [{ id: "1", text: "a", done: false, subtasks }] });
+    expect(() => parse(mk("x"))).toThrow();
+    expect(() => parse(mk([{ id: "s", text: "", done: false }]))).toThrow();
+    expect(() => parse(mk([{ id: "s", text: "t", done: "no" }]))).toThrow();
+    expect(() => parse(mk([{ id: "", text: "t", done: false }]))).toThrow();
+    expect(() => parse(mk([{ id: "s", text: "t", done: false }, { id: "s", text: "u", done: false }]))).toThrow();
+    expect(() => parse(mk([null]))).toThrow();
   });
 });

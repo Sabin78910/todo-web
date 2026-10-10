@@ -5,6 +5,12 @@ export interface Todo {
   due?: string; // YYYY-MM-DD
   priority?: Priority;
   repeat?: Repeat;
+  subtasks?: Subtask[];
+}
+export interface Subtask {
+  id: string;
+  text: string;
+  done: boolean;
 }
 export type Repeat = "daily" | "weekly";
 export type Priority = 1 | 2 | 3; // 1 = highest
@@ -28,8 +34,20 @@ export const toggleTodo = (list: Todo[], id: string, today?: string, newId: stri
   const t = list.find((x) => x.id === id);
   const toggled = list.map((x) => (x.id === id ? { ...x, done: !x.done } : x));
   if (!t || t.done || !t.repeat || !today) return toggled;
-  return [...toggled, { ...t, id: newId, done: false, due: nextDue(t.due ?? today, t.repeat) }];
+  return [...toggled, { ...t, id: newId, done: false, due: nextDue(t.due ?? today, t.repeat), ...(t.subtasks ? { subtasks: t.subtasks.map((s) => ({ ...s, done: false })) } : {}) }];
 };
+
+const mapSubtasks = (list: Todo[], id: string, f: (s: Subtask[]) => Subtask[]): Todo[] =>
+  list.map((t) => (t.id === id ? { ...t, subtasks: f(t.subtasks ?? []) } : t));
+
+export const addSubtask = (list: Todo[], id: string, text: string, subId: string = crypto.randomUUID()): Todo[] =>
+  text.trim() ? mapSubtasks(list, id, (s) => [...s, { id: subId, text: text.trim(), done: false }]) : list;
+
+export const toggleSubtask = (list: Todo[], id: string, subId: string): Todo[] =>
+  mapSubtasks(list, id, (s) => s.map((x) => (x.id === subId ? { ...x, done: !x.done } : x)));
+
+export const removeSubtask = (list: Todo[], id: string, subId: string): Todo[] =>
+  mapSubtasks(list, id, (s) => s.filter((x) => x.id !== subId));
 
 export const removeTodo = (list: Todo[], id: string): Todo[] => list.filter((t) => t.id !== id);
 
@@ -117,6 +135,18 @@ export const dueStatus = (t: Todo, today: string): "overdue" | "today" | "later"
 export const serialize = (list: Todo[]): string => JSON.stringify({ version: 1, todos: list }, null, 2);
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const parseSubtasks = (raw: unknown): Subtask[] => {
+  if (!Array.isArray(raw)) return bad();
+  const ids = new Set<string>();
+  return raw.map((r: Record<string, unknown> | null) => {
+    if (typeof r !== "object" || r === null) return bad();
+    const { id, text, done } = r;
+    if (typeof id !== "string" || !id || ids.has(id)) return bad();
+    if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
+    ids.add(id);
+    return { id, text, done };
+  });
+};
 const bad = (): never => {
   throw new Error("invalid backup");
 };
@@ -134,14 +164,15 @@ export const parse = (json: string): Todo[] => {
   const ids = new Set<string>();
   return list.map((raw: Record<string, unknown> | null) => {
     if (typeof raw !== "object" || raw === null) return bad();
-    const { id, text, done, due, priority, repeat } = raw;
+    const { id, text, done, due, priority, repeat, subtasks } = raw;
     if (typeof id !== "string" || !id || ids.has(id)) return bad();
     if (typeof text !== "string" || !text.trim() || typeof done !== "boolean") return bad();
     if (due !== undefined && (typeof due !== "string" || !DAY.test(due))) return bad();
     if (priority !== undefined && priority !== 1 && priority !== 2 && priority !== 3) return bad();
     if (repeat !== undefined && repeat !== "daily" && repeat !== "weekly") return bad();
+    const subs = subtasks === undefined ? undefined : parseSubtasks(subtasks);
     ids.add(id);
-    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}) } as Todo;
+    return { id, text, done, ...(due ? { due } : {}), ...(priority ? { priority } : {}), ...(repeat ? { repeat } : {}), ...(subs ? { subtasks: subs } : {}) } as Todo;
   });
 };
 
